@@ -9,6 +9,7 @@ class Bot(particle.Particle):
 
     def __init__(self, conf, env):
         super().__init__()
+        self.id = None
         self.conf = conf
         self.vmax=conf.vmax
         self.env = env
@@ -20,13 +21,14 @@ class Bot(particle.Particle):
     def get_state(self):
         return self._state
 
-    def update(self, interval):
-        v_shill_obstacle= self.avoid(self.env.obstacles)
+    def update(self, interval, *args):
+        v_shill_obstacle = self.avoid(self.env.obstacles)
         v_shill_wall = self.avoid([self.env.arena])
         if not self.inArena():  # come back to arena if you're out. Bad Bot!
              v_shill_wall = -2*v_shill_wall
         v_wp = self.goto(self.waypoint)
-        self.acc += v_wp + v_shill_obstacle + v_shill_wall
+        self.acc += (v_wp + v_shill_obstacle + v_shill_wall)-self.vel
+
         #self.ln.set_data(self.pos + self.acc)
         #print(self.vel, self.acc)
         # decay charge
@@ -40,20 +42,20 @@ class Bot(particle.Particle):
         return r_is, self.conf.v_shill*unit_vector(v_s)
 
     def avoid(self, obstacles):
-        """"obstacle/wall collision avoidance through shilling"""
+        """obstacle/wall collision avoidance through shilling"""
         v_si = np.zeros(2)
         for obs in obstacles:
             r_si, v_s = self.sense(obs.get_xy())
-            v_smax = brake_decay(r_si - self.conf.r0_shill, self.conf.acc_shill, self.conf.p_shill)
+            v_smax = brake_decay(r_si - self.conf.r0_shill, self.conf.a_shill, self.conf.p_shill)
             v_si_mag = norm(v_s-self.vel)
             if v_si_mag > v_smax:
                 v_si += (v_si_mag - v_smax)* unit_vector(v_s-self.vel)
-        return v_si  #all possible shilling from walls and geofence
+        return v_si  # all possible shilling from walls and geofence
 
     def scw(self, *args):
         """ set current waypoint"""
-        if len(args)==0:
-            self.waypoint =None
+        if len(args) == 0:
+            self.waypoint = None
         else:
             self.waypoint = self.vmax*unit_vector(np.array([args[0], args[1]]))
 

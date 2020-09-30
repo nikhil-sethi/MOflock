@@ -83,28 +83,27 @@ def distFromLine(point, line):
     pass
 def InShadow(point, edge_startPoint, edge_endPoint):
     '''
-    returns: vector from obstacle to point, distance, bool for shadow check
+    returns: actual vector from edge to point, distance, bool for shadow check
     '''
     edge=unit_vector(edge_endPoint-edge_startPoint)
     v1 = edge_startPoint - point
     v2 = edge_endPoint - point
-    proj=v1.dot(edge)*edge
+    proj = v1.dot(edge)*edge
     edgeToPoint = proj-v1
-    dist = norm(edgeToPoint)
     if v1.dot(edge)*v2.dot(edge)<0:
-        return edgeToPoint, dist, True
-    return edgeToPoint, dist, False
+        return edgeToPoint, norm(edgeToPoint), True
+    return edgeToPoint, norm(edgeToPoint), False
 
-def vectorFromPolygon(point, obstacle):
+def vectorFromPolygon(point, polygon):
     """
     :param point is a 1x2 numpy array [x,y] of concerned point
-    :param obstacle is an Nx2 matrix of CCW ordered points of a polygon
-    :returns a vector from closest point on obstacle towards 'position'"""
-    cp_index = np.argmin(norm(point - obstacle, axis=1))
-    edge2ToPoint, dist2, e2_shadow = InShadow(point, obstacle[cp_index], obstacle[cp_index + 1])
+    :param polygon is an Nx2 matrix of CCW ordered points
+    :returns a vector from closest point on polygon towards 'position'"""
+    cp_index = np.argmin(norm(point - polygon, axis=1))
+    edge2ToPoint, dist2, e2_shadow = InShadow(point, polygon[cp_index], polygon[cp_index + 1])
     if cp_index==0:
-        cp_index = -1   # point -1 and 0 are same. This makes sense in the next shadow function
-    edge1ToPoint, dist1, e1_shadow = InShadow(point,obstacle[cp_index-1], obstacle[cp_index])
+        cp_index = -1   # point -1 and 0 are same.
+    edge1ToPoint, dist1, e1_shadow = InShadow(point,polygon[cp_index-1], polygon[cp_index])
 
     if e1_shadow:
         ans = edge1ToPoint
@@ -114,7 +113,7 @@ def vectorFromPolygon(point, obstacle):
     elif e2_shadow:
         ans = edge2ToPoint
     else:
-        return point - obstacle[cp_index]
+        return point - polygon[cp_index]
     return ans
 
 

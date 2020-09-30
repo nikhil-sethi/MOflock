@@ -1,7 +1,7 @@
 from matplotlib.animation import FuncAnimation
 import matplotlib.pyplot as plt
 from Methods.vector_algebra import unit_vector, absheading_from_vec
-from Methods.controls import  update_corr
+from Methods.controls import update_corr, norm
 import numpy as np
 
 
@@ -25,10 +25,10 @@ class Particle:
         self.animated = animated
 
     def update(self, interval):
-        step = (interval/1000)*(1+update_corr(interval)) #correction term for cpu animation lag
+        step = (interval/1000)*(1+update_corr(interval))  # correction term for cpu animation lag
         self.vel += self.acc * step
-        #print(self.vel,self.acc)
-        self.vel = self.vmax * unit_vector(self.vel)
+        # print(self.vel,self.acc)
+        self.vel = unit_vector(self.vel) * min(norm(self.vel), self.vmax)
         self.pos += self.vel * step
         self.acc = np.zeros(2)
 
