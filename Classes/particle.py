@@ -1,7 +1,7 @@
 from matplotlib.animation import FuncAnimation
 import matplotlib.pyplot as plt
 from Methods.vector_algebra import unit_vector, absheading_from_vec
-from Methods.controls import update_corr, norm
+from Methods.controls import norm
 import numpy as np
 
 
@@ -15,7 +15,7 @@ class Particle:
         maxForce
     position : initial position, default
     '''
-    def __init__(self, position=np.zeros(2), velocity=np.zeros(2), max_vel=0.5, acceleration=np.zeros(2), max_acc=0.2, animated=True):
+    def __init__(self, position=np.zeros(2), velocity=np.zeros(2), max_vel=0.5, acceleration=np.zeros(2), max_acc=6, animated=True):
 
         self.pos = np.array(position, dtype=float)
         self.vel = np.array(velocity, dtype=float)
@@ -24,12 +24,11 @@ class Particle:
         self.amax = max_acc
         self.animated = animated
 
-    def update(self, interval):
-        step = (interval/1000)*(1+update_corr(interval))  # correction term for cpu animation lag
+    def update(self, step):
         self.vel += self.acc * step
         # print(self.vel,self.acc)
         self.vel = unit_vector(self.vel) * min(norm(self.vel), self.vmax)
-        self.pos += self.vel * step
+        #self.pos += self.vel * step
         self.acc = np.zeros(2)
 
     # control methods

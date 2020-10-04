@@ -1,13 +1,13 @@
 # CoBot configuration file
 
 # Collaboration parameters
-r0_rep = 10   #metres
-p_rep = 0.5
-r0_frict = 20
+r0_rep = 40  #metres
+p_rep = 0.07
+r0_frict = 80
 '''Stopping point offset of alignment. The distance of the stopping point in front of
 agents according to the optimal velocity reduction curve. Below this value alignment reduces all velocity difference above the given small velocity slack threshold.
 Optimization tends to increase this value above intuitive levels to maximize interagent alignment in the whole communication range without spatial dependence.'''
-a_frict = 8.94
+a_frict = 9.94
 '''Acceleration of braking curve. The maximal allowed acceleration in the optimal
 braking curve used for determining the maximal allowed velocity difference between agents. 
 Higher values assume that agents can brake quicker and thus make
@@ -29,7 +29,7 @@ within the flock during turns, which results in increased flock-level agility ar
 obstacles and at walls. Some velocity slack also helps eliminating roll and pitch oscillations arising in real systems due to strong alignment and the delayed response
 between tilting and velocity change. Should be kept at small levels as too large
 values disable alignment completely.'''
-c_frict = 0.1
+c_frict = 0.05
 '''Coefficient of velocity alignment. Linear coefficient of the velocity difference error reduction in the velocity alignment term. Higher values create stronger damping between agents which helps reducing repulsion-induced oscillations but makes
 motion more sluggish. Optimization tends to decrease this value below intuitive
 levels.'''
@@ -39,10 +39,10 @@ v_flock = 6
 
 
 # Bot parameters
-r0_shill = 1
-v_shill = 9
+r0_shill = 0.5
+v_shill = 19.7
 a_shill = 3.54
-p_shill = 3.0
+p_shill = 5.44
 charge = 95
 
 # Particle parameters

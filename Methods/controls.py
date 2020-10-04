@@ -3,7 +3,7 @@ from Methods.vector_algebra import norm
 from itertools import combinations as pairs
 
 def update_corr(x):
-    """correction equation for the interval update. weight and bias will depend on CPU"""
+    """correction equation for the t_update update. weight and bias will depend on CPU"""
     return np.exp(-2 * np.log10(x) + 2)
 
 
@@ -17,8 +17,18 @@ def create_adjMat(agents):
 
 
 def brake_decay(r, a, p):
-    arr=np.array(r)
+    arr = np.array(r)
     arr[r < 0] = 0
     arr[r < (a / p ** 2)] *= p
     arr[r >= (a / p ** 2)] = np.sqrt((2 * a * arr[r >= (a / p ** 2)]) - (a / p) ** 2)
     return arr
+
+def add_innernoise(gpos, gvel, sigma, deltaT, lam =0.1):
+    force = -(np.sqrt(2*lam*sigma)/3)*deltaT*gpos
+    damping = -lam*deltaT*gvel
+    noiseToAdd = np.random.normal(0, 1, size=len(gpos))*(np.sqrt(2*lam*sigma*deltaT)) + damping + force
+    gvel += noiseToAdd
+    gpos += gvel * deltaT
+
+def add_outernoise(vel, sigma, deltaT):
+    vel += np.random.normal(0, 1, size=len(vel))*np.sqrt(2*sigma*deltaT)

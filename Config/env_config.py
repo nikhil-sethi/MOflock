@@ -1,10 +1,10 @@
 # environment configuration file
 import numpy as np
 # [geofence]
-geofence = np.array([[-100, -100],  #bottom left
-                    [100, -100],
-                    [100, 100],
-                    [-100, 100]])     # top left
+geofence = np.array([[-125, -125],  #bottom left
+                    [125, -125],
+                    [125, 125],
+                    [-125, 125]])     # top left
 
 # [obstacles]
 '''is a dictionary of obstacles with each obstacle as matrix of points[x,y] in CCW manner'''
@@ -30,3 +30,11 @@ weather = {'temperature': 37,
 update_interval = 100  # time in miliseconds between each frame
 # this does not update in real time with this value. Probably slowed down due to cpu.
 # takes about exp(-2*log10(update_interval)+2)*100 percent longer on an i3 8th gen cpu
+
+#[noise and delays]
+gps_refresh = 200  #ms
+sigma_inner = 0.005  #m2/s2
+
+sigma_outer = 0.2  #m2/s3
+
+comm_refresh = 1000  #ms

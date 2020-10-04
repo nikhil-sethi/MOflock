@@ -12,12 +12,19 @@ class CoBot(bot.Bot):
 
     def update(self, interval, *args):
         #self.flockmates = self.env.agents(np.argwhere(d_j <self.conf.r_cluster))
+
         v_rep = self.separate(args[0], args[1])
         v_frict = self.align(args[2], args[3], args[1])
+        #print(self.id,self.v_d, self.vel)
+        self.v_d = v_rep + v_frict + self.conf.v_flock * unit_vector(self.vel)
+        #print(self.id,self.v_d, self.vel,'\n')
 
-        self.acc += (v_rep + v_frict + 1*self.conf.v_flock * unit_vector(self.vel))-self.vel
-
+        #print(self.vel)
         super().update(interval)
+
+    def get_nbors(self):
+        r_j = np.array([agent.pos-self.pos for agent in self.env.agents])
+        return r_j
 
     def separate(self, r, r_j):
         temp = np.copy(r_j)  # create new reference

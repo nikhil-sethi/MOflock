@@ -12,6 +12,10 @@ class Bot(particle.Particle):
         self.id = None
         self.conf = conf
         self.vmax=conf.vmax
+        self.amax = conf.amax
+        self.v_d = self.vel
+        self.gps_pos = np.zeros(2)
+        self.gps_vel = np.zeros(2)
         self.env = env
         self._state = {"position":self.gcp(), "velocity":self.gcv(), "charge":self.conf.charge}
         self.waypoint = None
@@ -27,12 +31,12 @@ class Bot(particle.Particle):
         if not self.inArena():  # come back to arena if you're out. Bad Bot!
              v_shill_wall = -2*v_shill_wall
         v_wp = self.goto(self.waypoint)
-        self.acc += (v_wp + v_shill_obstacle + v_shill_wall)-self.vel
+        self.v_d += (v_wp + v_shill_obstacle+v_shill_wall)
 
-        #self.ln.set_data(self.pos + self.acc)
+        # self.ln.set_data(self.pos + self.acc)
         #print(self.vel, self.acc)
         # decay charge
-        super().update(interval)
+        # super().update(interval)
 
     def sense(self, obstacle):
         # this is a more exact method which loops over all obstacles
