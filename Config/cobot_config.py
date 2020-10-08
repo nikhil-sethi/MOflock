@@ -1,9 +1,11 @@
 # CoBot configuration file
 
+v_flock = 6
+
 # Collaboration parameters
-r0_rep = 40  #metres
+r0_rep = 30  # metres   # take more than double of your 'safe' distance (depends on gain + noise though)
 p_rep = 0.07
-r0_frict = 80
+r0_frict = 80   # best to keep this around comm range(do the best alignment possible under comm range)
 '''Stopping point offset of alignment. The distance of the stopping point in front of
 agents according to the optimal velocity reduction curve. Below this value alignment reduces all velocity difference above the given small velocity slack threshold.
 Optimization tends to increase this value above intuitive levels to maximize interagent alignment in the whole communication range without spatial dependence.'''
@@ -34,17 +36,20 @@ c_frict = 0.05
 motion more sluggish. Optimization tends to decrease this value below intuitive
 levels.'''
 
-v_flock = 6
-
-
-
 # Bot parameters
 r0_shill = 0.5
-v_shill = 19.7
-a_shill = 3.54
-p_shill = 5.44
+v_shill = 14    # higher means faster shilling
+a_shill = 4  # higher means delayed but sharper shilling (a is the slope), lower is smoother
+p_shill = 2  # higher means delayed and sharper and linear curve below a/p^2
 charge = 95
 
 # Particle parameters
 vmax = 8 # m/s
 amax = 6 # m2/s
+
+# Sensors
+gps_del = 200  # ms
+sigma_inner = 0.005  # m2/s2
+
+comm_del = 1000  # ms
+comm_radius = 80  # m

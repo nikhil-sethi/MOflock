@@ -1,5 +1,5 @@
 import numpy as np
-norm =np.linalg.norm
+import math
 
 def confidence_ellipse(x, y, chi=5.991):
     """
@@ -32,10 +32,12 @@ def confidence_ellipse(x, y, chi=5.991):
 def rotmat(th):
     return np.array([[np.cos(th), -np.sin(th)], [np.sin(th), np.cos(th)]])
 
+def norm(vec):
+    return math.sqrt(vec[0]**2 + vec[1]**2)
 
 def unit_vector(vec):
     if np.any(vec):
-        return vec / np.linalg.norm(vec)
+        return vec / norm(vec)
     return np.zeros(2)
 
 
@@ -99,7 +101,7 @@ def vectorFromPolygon(point, polygon):
     :param point is a 1x2 numpy array [x,y] of concerned point
     :param polygon is an Nx2 matrix of CCW ordered points
     :returns a vector from closest point on polygon towards 'position'"""
-    cp_index = np.argmin(norm(point - polygon, axis=1))
+    cp_index = np.argmin(np.linalg.norm(point - polygon, axis=1))
     edge2ToPoint, dist2, e2_shadow = InShadow(point, polygon[cp_index], polygon[cp_index + 1])
     if cp_index==0:
         cp_index = -1   # point -1 and 0 are same.
@@ -108,7 +110,7 @@ def vectorFromPolygon(point, polygon):
     if e1_shadow:
         ans = edge1ToPoint
         if e2_shadow:
-            if dist2<dist1:
+            if dist2< 0.85*dist1:
                 ans= edge2ToPoint
     elif e2_shadow:
         ans = edge2ToPoint

@@ -1,59 +1,100 @@
-#TODO
+# TODO
 
 import numpy as np
 from Classes import particle  # needs to be after figure definition as it gets the current figure
-from Methods.controls import brake_decay
+from Methods.controls import brake_decay, add_outernoise
 from Methods.vector_algebra import vectorFromPolygon, unit_vector, norm
+import Config.cobot_config as conf
+import Config.defaults as dconf
+
 
 class Bot(particle.Particle):
 
-    def __init__(self, conf, env):
+    def __init__(self, env):
         super().__init__()
         self.id = None
-        self.conf = conf
-        self.vmax=conf.vmax
+        self.vmax = conf.vmax
         self.amax = conf.amax
-        self.v_d = self.vel
+        self.v_d = np.zeros(2)
         self.gps_pos = np.zeros(2)
         self.gps_vel = np.zeros(2)
         self.env = env
-        self._state = {"position":self.gcp(), "velocity":self.gcv(), "charge":self.conf.charge}
         self.waypoint = None
-        #self.sensor= patch.Wedge((self.gcp()[0], self.gcp[1]), self.r, self.gch()-self.phi/2, self.gch()+self.phi/2,edgecolor='b', facecolor=None)
-        self.ln,= self.env.ax.plot([],[], 'bo', markersize='2')
+        # self.sensor= patch.Wedge((self.gcp()[0], self.gcp[1]), self.r, self.gch()-self.phi/2, self.gch()+self.phi/2,edgecolor='b', facecolor=None)
+        self.ln, = self.env.ax.plot([], [], 'bo', markersize='2')
+        self.v, = self.env.ax.plot([], [], 'ko', markersize='2')
 
     def get_state(self):
-        return self._state
+        return self.pos, self.vel
 
-    def update(self, interval, *args):
-        v_shill_obstacle = self.avoid(self.env.obstacles)
-        v_shill_wall = self.avoid([self.env.arena])
-        if not self.inArena():  # come back to arena if you're out. Bad Bot!
-             v_shill_wall = -2*v_shill_wall
-        v_wp = self.goto(self.waypoint)
-        self.v_d += (v_wp + v_shill_obstacle+v_shill_wall)
+    def update(self, step, frame):
+
+        add_outernoise(self.vel, self.env.sigma_outer, step)
+        self.acc += self.v_d - self.vel - self.gps_vel
+
+        super().update(step, frame)
 
         # self.ln.set_data(self.pos + self.acc)
-        #print(self.vel, self.acc)
+        # print(self.vel, self.acc)
         # decay charge
-        # super().update(interval)
+        #
 
-    def sense(self, obstacle):
-        # this is a more exact method which loops over all obstacles
-        v_s = vectorFromPolygon(self.pos, obstacle) # shill vector from obstacle to position
-        r_is = norm(v_s)    #distance from obstacle
+    def calcDesiredVelocity(self):
+        v_shill_obstacle = 0
+        v_shill_wall = 0
+        if dconf.obs_flag:
+            v_shill_obstacle = self.avoid(self.env.obstacles, 'obstacle')
+        if dconf.wall_flag:
+            v_shill_wall = self.avoid([self.env.arena], 'arena')
+            # if not self.inArena():  # come back to arena if you're out. Bad Bot!
+            #     v_shill_wall = -2 * v_shill_wall
+        v_wp = self.goto(self.waypoint)
+        self.v_d += (v_wp + v_shill_obstacle + v_shill_wall) + conf.v_flock * unit_vector(self.vel)
 
-        return r_is, self.conf.v_shill*unit_vector(v_s)
+    def sense(self, obstacle, obstype, method):
+        if method == 'center circle':
+            com = np.sum(obstacle[:-1, :], axis=0) / len(obstacle)
+            v_s = com - self.pos
+            r_i_com = norm(v_s)  # distance from COM
+            if obstype == 'arena':
+                r_obs = 1.2 * obstacle[1, 0]
+                r_is = abs(r_i_com - r_obs)
+                return abs(r_is), conf.v_shill * v_s / r_i_com
 
-    def avoid(self, obstacles):
+            r_obs = np.max(np.linalg.norm(obstacle[:-1, :] - com, axis=1))  # obstacle radius
+            r_is = abs(r_i_com - r_obs)
+            return r_is, -conf.v_shill * v_s / r_i_com
+        elif method == 'center square':
+            assert obstype != 'obstacle', "'center square' method is only valid for arena type objects. Select the 'center circle' or 'perpendicular' method"
+            if not self.inArena(factor=1.2):
+                com = np.sum(obstacle[:-1, :], axis=0) / len(obstacle)
+                v_s = com - self.pos
+                r_i_com = norm(v_s)  # distance from COM
+                r_obs = 1.2 * obstacle[1, 0]
+                r_is = abs(r_i_com - r_obs)
+                return abs(r_is), conf.v_shill * v_s / r_i_com
+            return 0, 0
+        elif method == 'perpendicular':
+            v_s = vectorFromPolygon(self.pos, obstacle)  # shill vector from obstacle to position
+            r_is = norm(v_s)  # distance from obstacle
+            if obstype == 'arena' and np.all(abs(self.pos) > 0.8*self.env.arena.get_xy()[1][0]):
+                com = np.sum(obstacle[:-1, :], axis=0) / len(obstacle)
+                v_s = com - self.pos
+            return r_is, conf.v_shill * unit_vector(v_s)
+
+    def avoid(self, obstacles, obstype, method='perpendicular'):
         """obstacle/wall collision avoidance through shilling"""
+        # this is a more exact method which loops over all obstacles
+        # can be modeled as a discrete points as well
         v_si = np.zeros(2)
         for obs in obstacles:
-            r_si, v_s = self.sense(obs.get_xy())
-            v_smax = brake_decay(r_si - self.conf.r0_shill, self.conf.a_shill, self.conf.p_shill)
-            v_si_mag = norm(v_s-self.vel)
+            r_si, v_s = self.sense(obs.get_xy(), obstype, method)
+
+            v_smax = brake_decay(r_si - conf.r0_shill, conf.a_shill, conf.p_shill)
+            v_si_mag = norm(v_s - self.vel)
             if v_si_mag > v_smax:
-                v_si += (v_si_mag - v_smax)* unit_vector(v_s-self.vel)
+                v_si += (v_si_mag - v_smax) * (v_s - self.vel) / v_si_mag
+                # self.v.set_data(self.pos + v_si)
         return v_si  # all possible shilling from walls and geofence
 
     def scw(self, *args):
@@ -61,15 +102,15 @@ class Bot(particle.Particle):
         if len(args) == 0:
             self.waypoint = None
         else:
-            self.waypoint = self.vmax*unit_vector(np.array([args[0], args[1]]))
+            self.waypoint = self.vmax * unit_vector(np.array([args[0], args[1]]))
 
     def goto(self, waypoint):
         if waypoint is None:
             return 0
-        return waypoint-self.pos
+        return waypoint - self.pos
 
-    def inArena(self):
-        return self.env.arena.get_path().contains_point(self.pos)
+    def inArena(self, factor=1.):
+        return self.env.arena.get_path().contains_point(factor * self.pos)
 
     '''
     def land(self):

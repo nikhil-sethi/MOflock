@@ -1,10 +1,11 @@
 import numpy as np
 from Methods.vector_algebra import norm
 from itertools import combinations as pairs
+import math
 
 def update_corr(x):
     """correction equation for the t_update update. weight and bias will depend on CPU"""
-    return np.exp(-2 * np.log10(x) + 2)
+    return math.exp(-2 * math.log10(x) + 2)
 
 
 def create_adjMat(agents):

@@ -1,8 +1,9 @@
 from matplotlib.animation import FuncAnimation
 import matplotlib.pyplot as plt
 from Methods.vector_algebra import unit_vector, absheading_from_vec
-from Methods.controls import norm
+from Methods.controls import norm,update_corr
 import numpy as np
+import Config.cobot_config as conf
 
 
 class Particle:
@@ -15,20 +16,18 @@ class Particle:
         maxForce
     position : initial position, default
     '''
-    def __init__(self, position=np.zeros(2), velocity=np.zeros(2), max_vel=0.5, acceleration=np.zeros(2), max_acc=6, animated=True):
+    def __init__(self, position=np.zeros(2), velocity=np.zeros(2), acceleration=np.zeros(2), animated=True):
 
         self.pos = np.array(position, dtype=float)
         self.vel = np.array(velocity, dtype=float)
         self.acc = acceleration
-        self.vmax = max_vel
-        self.amax = max_acc
         self.animated = animated
 
-    def update(self, step):
-        self.vel += self.acc * step
+    def update(self, step, frame):
+        self.vel += step*unit_vector(self.acc) * min(norm(self.acc), conf.amax)
         # print(self.vel,self.acc)
-        self.vel = unit_vector(self.vel) * min(norm(self.vel), self.vmax)
-        #self.pos += self.vel * step
+        self.vel = unit_vector(self.vel) * min(norm(self.vel), conf.vmax)
+        self.pos += self.vel * step
         self.acc = np.zeros(2)
 
     # control methods
@@ -36,7 +35,7 @@ class Particle:
         """apply a force in give direction on the particle"""
 
     def steer(self, steer, maxForce):
-        steer = self.vmax * unit_vector(steer)  # normalise
+        steer = conf.vmax * unit_vector(steer)  # normalise
         steer -= self.vel  # this is the actual steering vector. The above one is the target direction(new vector)
         steer *= maxForce  # sensitivity
         return steer
@@ -44,7 +43,7 @@ class Particle:
     # setter methods
     def sch(self, heading: int):
         heading = np.deg2rad(heading)
-        self.vel = self.vmax*np.array([np.cos(heading), np.sin(heading)])
+        self.vel = conf.vmax*np.array([np.cos(heading), np.sin(heading)])
 
     def scv(self, vx, vy):
         self.vel = np.array([vx, vy], dtype=float)

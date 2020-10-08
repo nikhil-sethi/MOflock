@@ -1,44 +1,50 @@
 '''
-Version: 1.2
+Version: 2.0
 features/corrections added
-- GPS(inner noise)
-- Wind (outer noise)
-- added comm range in a dirty manner
-- added comm delays by making a memory
-- added maximum acceleration/ inertia
-- changed a lot of design with the update functions. Almost all centralised
+
+- Completely decentralised(at least i think so) and noised.
+- Fixed the corner problem by adding a repulsive corner vector
+- Added + tested some avoidance methods
+- Much cleaner than before
+- Added some flags in default config to toggle features in real time
+
 
 problems
-- centralised
-- some shady behaviour on corners. Repulsion doesnt work around corners.
-- very dirty. needs to be changed so committed anyway
+- A lot of stuff might not be optimized for least complexity
+- API could be better in cobot
+
 
 TODO-next version
-- decentralised
-- cleaned up
+- optimization
 
-commit video: none. sorry
+commit video: https://www.youtube.com/watch?v=6dMFWlXTj9U
 '''
 
-
-from Config import defaults, cobot_config, env_config
+from Config import defaults, cobot_config, env_config   # import all configs even if not used to change real time params
 from Classes.environment import Env
 from Classes.cobot import CoBot  # a collaborative aerial bot
 import numpy as np
 import time
-env = Env(env_config)
+env = Env()
 agents = list()
 
 for i in range(defaults.num_agents):
-    agents.append(CoBot(cobot_config, env))
+    agents.append(CoBot(env))
 #np.random.seed(1)
 for i, agent in enumerate(agents):
     agent.id = i
     agent.scp(-100+200*np.random.rand(), -100+200*np.random.rand())
-
     agent.scv(-1 + 2 * np.random.rand(), -1 + 2 * np.random.rand())
+    agent.memory.append(agent.get_state())
+
     #agent.scp(0,0)
     #agent.scv(-1,-1)
+# agents[0].scp(0,0)
+# agents[1].scp(-20,0)
+# agents[0].scv(1,1)
+# agents[1].scv(1,0)
+# agents[0].memory.append(agents[0].get_state())
+# agents[1].memory.append(agents[1].get_state())
 if __name__ == '__main__':
     env.add_agents(agents)
     #time.sleep(5)
