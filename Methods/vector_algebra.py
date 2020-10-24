@@ -1,6 +1,7 @@
 import numpy as np
 import math
 
+
 def confidence_ellipse(x, y, chi=5.991):
     """
     Create a plot of the covariance confidence ellipse of *x* and *y*.
@@ -32,12 +33,15 @@ def confidence_ellipse(x, y, chi=5.991):
 def rotmat(th):
     return np.array([[np.cos(th), -np.sin(th)], [np.sin(th), np.cos(th)]])
 
+
 def norm(vec):
-    return math.sqrt(vec[0]**2 + vec[1]**2)
+    return math.sqrt(vec[0] ** 2 + vec[1] ** 2)
+
 
 def unit_vector(vec):
     if np.any(vec):
-        return vec / norm(vec)
+        n = norm(vec)
+        return vec / n, n
     return np.zeros(2)
 
 
@@ -52,6 +56,11 @@ def absheading_from_vec(vec: np.array, mode='cartesian') -> float:
     head = np.arctan2(y, x) * 180 / np.pi
     if head < 0: head += 360
     return head
+
+
+def relu(x):
+    if x < 0: x = 0
+    return x
 
 
 def vec_from_absheading(head: float, mode: str) -> np.array:
@@ -81,20 +90,24 @@ def to_quaternion(roll=0.0, pitch=0.0, yaw=0.0):
 
     return [w, x, y, z]
 
+
 def distFromLine(point, line):
     pass
+
+
 def InShadow(point, edge_startPoint, edge_endPoint):
     '''
     returns: actual vector from edge to point, distance, bool for shadow check
     '''
-    edge=unit_vector(edge_endPoint-edge_startPoint)
-    v1 = edge_startPoint - point
-    v2 = edge_endPoint - point
-    proj = v1.dot(edge)*edge
-    edgeToPoint = proj-v1
-    if v1.dot(edge)*v2.dot(edge)<0:
+    edge = unit_vector(edge_endPoint - edge_startPoint)[0]
+    v1 = point - edge_startPoint  # - point
+    v2 = point - edge_endPoint  # - point
+    proj = v1.dot(edge) * edge
+    edgeToPoint = v1 - proj  # -v1
+    if v1.dot(edge) * v2.dot(edge) < 0:
         return edgeToPoint, norm(edgeToPoint), True
     return edgeToPoint, norm(edgeToPoint), False
+
 
 def vectorFromPolygon(point, polygon):
     """
@@ -103,19 +116,17 @@ def vectorFromPolygon(point, polygon):
     :returns a vector from closest point on polygon towards 'position'"""
     cp_index = np.argmin(np.linalg.norm(point - polygon, axis=1))
     edge2ToPoint, dist2, e2_shadow = InShadow(point, polygon[cp_index], polygon[cp_index + 1])
-    if cp_index==0:
-        cp_index = -1   # point -1 and 0 are same.
-    edge1ToPoint, dist1, e1_shadow = InShadow(point,polygon[cp_index-1], polygon[cp_index])
+    if cp_index == 0:
+        cp_index = -1  # point -1 and 0 are same.
+    edge1ToPoint, dist1, e1_shadow = InShadow(point, polygon[cp_index - 1], polygon[cp_index])
 
     if e1_shadow:
         ans = edge1ToPoint
         if e2_shadow:
-            if dist2< 0.85*dist1:
-                ans= edge2ToPoint
+            if dist2 < 0.85 * dist1:
+                ans = edge2ToPoint
     elif e2_shadow:
         ans = edge2ToPoint
     else:
         return point - polygon[cp_index]
     return ans
-
-

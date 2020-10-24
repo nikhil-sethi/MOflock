@@ -20,15 +20,3 @@ obstacles = [np.array([[20, 0],
     #                 [],
     #                 [],
     #                 []]), }
-
-# [weather]
-weather = {'temperature': 37,
-            'wind_speed': 0,
-            'wind_direction': None}
-sigma_outer = 0.2  #m2/s3
-
-# [animation]
-interval = 100  # time in miliseconds between each frame
-# this does not update in real time with this value. Probably slowed down due to cpu.
-# takes about exp(-2*log10(update_interval)+2)*100 percent longer on an i3 8th gen cpu
-

@@ -1,66 +1,85 @@
 '''
-Version: 2.0
+Version: 3.0
 features/corrections added
-
-- Completely decentralised(at least i think so) and noised.
-- Fixed the corner problem by adding a repulsive corner vector
-- Added + tested some avoidance methods
-- Much cleaner than before
-- Added some flags in default config to toggle features in real time
-
+- optimization
+- multiprocessing
+- collective target tracking
+- configuration, API changes
+- wall avoidance algo changed (repulsive corner wasnt the best)
+- animation capability changed to custom loop instead of funcanimation
 
 problems
 - A lot of stuff might not be optimized for least complexity
-- API could be better in cobot
 
+TODO-other branches
+- RL
+- Cooperation + target detection
+- SITL, ROS etc.
+> paper implementaion essentially ends here. New features will be added in other branches
 
-TODO-next version
-- optimization
-
-commit video: https://www.youtube.com/watch?v=6dMFWlXTj9U
 '''
 
-from Config import defaults, cobot_config, env_config   # import all configs even if not used to change real time params
+from Config import defaults, cobot_config, opt_config
+
 from Classes.environment import Env
 from Classes.cobot import CoBot  # a collaborative aerial bot
+from Classes import optimizer
+
+import multiprocessing as mp
 import numpy as np
-import time
-env = Env()
-agents = list()
+from Methods.transfer_funcs import orderparamsTofitness
+from time import perf_counter
 
-for i in range(defaults.num_agents):
-    agents.append(CoBot(env))
-#np.random.seed(1)
-for i, agent in enumerate(agents):
-    agent.id = i
-    agent.scp(-100+200*np.random.rand(), -100+200*np.random.rand())
-    agent.scv(-1 + 2 * np.random.rand(), -1 + 2 * np.random.rand())
-    agent.memory.append(agent.get_state())
-
-    #agent.scp(0,0)
-    #agent.scv(-1,-1)
 # agents[0].scp(0,0)
 # agents[1].scp(-20,0)
 # agents[0].scv(1,1)
 # agents[1].scv(1,0)
 # agents[0].memory.append(agents[0].get_state())
 # agents[1].memory.append(agents[1].get_state())
+
 if __name__ == '__main__':
-    env.add_agents(agents)
-    #time.sleep(5)
-    env.start()
+    if defaults.opt_flag:
 
-'''
-psuedocode
+        parameters = {
+            "npop": opt_config.population_size,
+            "ngen": opt_config.number_of_generations,
+            "ncpu": opt_config.number_of_cpus,
+            "asyncEnvs/core": opt_config.parallelEnvs_per_core,
+            "vars": cobot_config.paramdict,
+            "var_lims": np.array(opt_config.var_lims),
+            "init_vars": opt_config.init_vars,
+            "sigma": opt_config.sigma
+        }
+        start = perf_counter()
+        opt = optimizer.Optimizer(parameters)
+        opt.run()
+        pops = opt.pops
+        ops = opt.ops
 
-import libs
+        print(f"Total time taken for optimization = {(perf_counter() - start)/60} minutes")
 
-load env_config
-load CoBot_config
+    else:
 
-create environment(env_config)
-for number of UAVs
-    create CoBots(CoBot_config, env) 
-    CoBots.start()
+        num_envs = defaults.num_envs
+        if num_envs <= 1:
+            num_envs = 1
+        # elif num_envs > 1:
+        #     assert defaults.animated == False, '!!Animation with multiple environments is not supported. Please change to headless mode.!!'
 
-'''
+        pool = mp.Pool()
+        jobs = []
+        for i in range(num_envs):
+            env = Env(i)
+            # genome = [18.13797864,	0.284189019,	27.66904294	,0.228751087,	2.89329558	,4.341461035,	7.310661496	,-11.00204234,	18.62826807	,8.081053292,	4.75371955]
+            # paramdict = dict(zip(cobot_config.paramdict.keys(), genome))
+            paramdict = cobot_config.paramdict  # change this if you want for each environment
+            env.add_agents(CoBot, paramdict, seed=defaults.envseed)
+            jobs.append(pool.apply_async(env.run, args=(defaults.envseed,)))
+
+        # Wait for children to finnish
+        pool.close()
+        pool.join()
+
+        order_paramlist = [job.get() for job in jobs]
+        fitnesses = list(map(orderparamsTofitness, order_paramlist))
+        print(fitnesses)

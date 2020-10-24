@@ -7,6 +7,21 @@ def update_corr(x):
     """correction equation for the t_update update. weight and bias will depend on CPU"""
     return math.exp(-2 * math.log10(x) + 2)
 
+def sigmoid(x, x_o, d):
+    if x < x_o-d:
+        return 1
+    elif x_o-d < x < x_o:
+        return 0.5 * (1 - math.cos(math.pi*(x-x_o)/d))
+    else:
+        return 0
+
+def sigmoid_brake(x, R, d):
+    if 0 < x < R:
+        return 0
+    elif R < x < R+d:
+        return 1+math.sin(math.pi*(x-R)/d - math.pi/2)
+    else:
+        return 1
 
 def create_adjMat(agents):
     distMat = np.zeros((len(agents), len(agents)))
@@ -16,12 +31,17 @@ def create_adjMat(agents):
         velMat[a1.id, a2.id] = velMat[a2.id, a1.id] = norm(a1.vel - a2.vel)
     return distMat, velMat
 
+def packet_lost(dist):
+    return False
 
 def brake_decay(r, a, p):
     arr = np.array(r)
     arr[r < 0] = 0
-    arr[r < (a / p ** 2)] *= p
-    arr[r >= (a / p ** 2)] = np.sqrt((2 * a * arr[r >= (a / p ** 2)]) - (a / p) ** 2)
+    arr[a < 0] = 0
+    arr[p < 0] = 0
+    if a>0 and p>0:
+        arr[r < (a / p ** 2)] *= p
+        arr[r >= (a / p ** 2)] = np.sqrt((2 * a * arr[r >= (a / p ** 2)]) - (a / p) ** 2)
     return arr
 
 def add_innernoise(gpos, gvel, sigma, deltaT, lam =0.1):
