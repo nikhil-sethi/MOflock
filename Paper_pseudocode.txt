@@ -1,0 +1,46 @@
+'''
+main
+    step
+        for which agent in all agents
+            pos +=velocity      #done this for synchronous updates
+        if time to refresh gps:
+            step inner gps noise in gpsphase, gpsdelayedphase
+                for each agent
+                    get gps_pos, gps_vel from agent
+                    calculate force, damping around gps_pos, gps_vel
+                    noisetoadd = randomvar + force+ damping
+                    gps_vel += noisetoAdd
+                    gps_pos+= noisetoAdd *deltaT
+
+        for whichagent in all agents
+            create phase
+                get number of neighbors and put their states in start of localactualphase
+                    for all agents
+                        find dist from whichagent
+                        calculate packetloss
+                        if distance<comm range and packet not loss
+                            neighbor+=1
+                            put state of this neighbor to the front after 1 of agent list
+                        if distance =0 (self)
+                            put state at 0 position
+                for each neighbor
+                    get neighbor state from the delayed phase(t_del time before now)
+                    insert position, velocity into the localactualphase
+                get whichagent position, velocity
+                add GPS error to velocity, position
+                insert position, velocity into the localactualphase
+                for each neighnor
+                    get neighbor state from the localactual phase(t_del time before now)
+                    add GPS error to velocity, position
+                    insert position, velocity into the localactualphase
+
+            realcopterforcelaw
+                if time to refresh gps
+                    get preferred velocity
+                        vd= v_flock+v_obs +v_wall + v_rep + v_frict
+                    acc= vd- velocity
+                    velocity += timestep* min(acc, amax)
+            add outer noise (wind)
+
+
+'''
