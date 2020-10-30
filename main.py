@@ -1,9 +1,9 @@
 '''
-Version: 3.0
+Version: 3.1
 features/corrections added
 - optimization
 - multiprocessing
-- collective target tracking
+- collective target tracking with mouse input
 - configuration, API changes
 - wall avoidance algo changed (repulsive corner wasnt the best)
 - animation capability changed to custom loop instead of funcanimation
@@ -70,9 +70,9 @@ if __name__ == '__main__':
         jobs = []
         for i in range(num_envs):
             env = Env(i)
-            # genome = [18.13797864,	0.284189019,	27.66904294	,0.228751087,	2.89329558	,4.341461035,	7.310661496	,-11.00204234,	18.62826807	,8.081053292,	4.75371955]
-            # paramdict = dict(zip(cobot_config.paramdict.keys(), genome))
-            paramdict = cobot_config.paramdict  # change this if you want for each environment
+            genome = [18.13797864,	0.284189019,	27.66904294	,0.228751087,	2.89329558	,4.341461035,	7.310661496	,-11.00204234,	18.62826807	,8.081053292,	4.75371955]
+            paramdict = dict(zip(cobot_config.paramdict.keys(), genome))
+            # paramdict = cobot_config.paramdict  # change this if you want for each environment
             env.add_agents(CoBot, paramdict, seed=defaults.envseed)
             jobs.append(pool.apply_async(env.run, args=(defaults.envseed,)))
 

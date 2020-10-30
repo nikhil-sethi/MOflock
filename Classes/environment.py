@@ -56,7 +56,8 @@ class Env:
                 if agent.inPolygon(obs):
                     agent.pos = np.zeros(2)
             agent.scv(-1 + 2 * np.random.rand(), -1 + 2 * np.random.rand())
-            agent.scw(50, 50)
+            if df.wp_flag:
+                agent.scw(0, 0) # default waypoint. use mouseclick to change in real time
             agent.memory.append(agent.get_state())
 
         self.agents = agents
@@ -73,14 +74,15 @@ class Env:
         if df.animated:
             self.fig, self.ax = plt.subplots()
             self.fig.set_size_inches(6, 6)
-            self.fig.canvas.manager.window.wm_geometry(f"+{200 + self.id * 550}+{300}")
-            self.ax.set(xlim=(self.gmin[0], self.gmax[0]), ylim=(self.gmin[1], self.gmax[1]), aspect='equal')
+            self.fig.canvas.manager.window.wm_geometry(f"+{200 + self.id * 550}+{200}")
+            self.ax.set(xlim=(self.gmin[0]-20, self.gmax[0]+20), ylim=(self.gmin[1]-20, self.gmax[1]+20), aspect='equal')
+            if df.wp_flag:
+                self.wp_artist, = self.ax.plot([], [], 'bo', markersize='4')
+                self.ax.figure.canvas.mpl_connect('button_release_event', self.change_waypoint)
             for agent in self.agents:
                 agent.artist, = self.ax.plot(agent.pos[0], agent.pos[1], 'ro', markersize=2)
                 # agent.ln, = self.ax.plot([], [], 'bo', markersize='1')
                 # agent.v, = self.ax.plot([], [], 'ko', markersize='1')
-                if df.wp_flag:
-                    self.ax.plot(agent.waypoint[0], agent.waypoint[1], 'bo', markersize=4)
             self.plot_static()
 
         start = time.time()
@@ -147,3 +149,10 @@ class Env:
         for obs in self.obstacles:
             self.ax.add_patch(obs)
         self.ax.add_patch(self.arena)
+
+    def change_waypoint(self, event):
+        waypoint = np.array([event.xdata, event.ydata])
+        for agent in self.agents:
+            agent.waypoint = waypoint
+        self.wp_artist.set_data(waypoint[0], waypoint[1])
+
