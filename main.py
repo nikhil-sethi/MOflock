@@ -1,15 +1,13 @@
 '''
-Version: 3.1
+Version: 3.2
 features/corrections added
-- optimization
-- multiprocessing
-- collective target tracking with mouse input
-- configuration, API changes
-- wall avoidance algo changed (repulsive corner wasnt the best)
-- animation capability changed to custom loop instead of funcanimation
+- optimization class refined and made much more simpler, no extra class needed and no sub processes now
+- general code cleanup
 
 problems
 - A lot of stuff might not be optimized for least complexity
+- bottleneck when both waypoint and obstacle avoidance is on
+- The drones go over obstacles when reaching a waypoint-> There need to be some sort of gains
 
 TODO-other branches
 - RL
@@ -56,21 +54,22 @@ if __name__ == '__main__':
         pops = opt.pops
         ops = opt.ops
 
-        print(f"Total time taken for optimization = {(perf_counter() - start)/60} minutes")
+        print(f"Total time taken for optimization = {(perf_counter() - start) / 60} minutes")
 
     else:
 
         num_envs = defaults.num_envs
         if num_envs <= 1:
             num_envs = 1
-        # elif num_envs > 1:
-        #     assert defaults.animated == False, '!!Animation with multiple environments is not supported. Please change to headless mode.!!'
+        elif num_envs > 1:
+            assert defaults.animated is False, '!!Animation with multiple environments is not recommended. Please change to headless mode.!!'
 
-        pool = mp.Pool()
+        pool = mp.Pool(num_envs)
         jobs = []
         for i in range(num_envs):
             env = Env(i)
-            genome = [18.13797864,	0.284189019,	27.66904294	,0.228751087,	2.89329558	,4.341461035,	7.310661496	,-11.00204234,	18.62826807	,8.081053292,	4.75371955]
+            genome = [18.13797864, 0.284189019, 27.66904294, 0.228751087, 2.89329558, 4.341461035, 7.310661496,
+                      -11.00204234, 18.62826807, 8.081053292, 4.75371955]
             paramdict = dict(zip(cobot_config.paramdict.keys(), genome))
             # paramdict = cobot_config.paramdict  # change this if you want for each environment
             env.add_agents(CoBot, paramdict, seed=defaults.envseed)

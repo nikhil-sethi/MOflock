@@ -1,7 +1,5 @@
-from matplotlib.animation import FuncAnimation
-import matplotlib.pyplot as plt
 from Methods.vector_algebra import unit_vector, absheading_from_vec
-from Methods.controls import norm,update_corr
+from Methods.controls import norm
 import numpy as np
 import Config.defaults as df
 
@@ -47,6 +45,7 @@ class Particle:
 
     def scv(self, vx, vy):
         self.vel = np.array([vx, vy], dtype=float)
+
     def scp(self, x, y):
         self.pos = np.array([x, y], dtype=float)
 

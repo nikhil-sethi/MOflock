@@ -1,8 +1,7 @@
 # optimization configuration file
-#set any values to None to use default optimizer value
 
-population_size = 100
-number_of_generations = 10
+population_size = 50    # = None for default
+number_of_generations = 10   # = None for default
 number_of_variables = 11
 parallelEnvs_per_core = 3  # number of environments running asynchronously per core per serial iteration
 number_of_cpus = 4

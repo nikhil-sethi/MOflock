@@ -1,35 +1,17 @@
-'''
-environment class
-- arena + g
-- obstacles
-- GPS accuracy
-- Weather
-'''
-import pdb
 import numpy as np
 from Methods.controls import update_corr
 import matplotlib.patches as p
 import matplotlib.pyplot as plt
-from matplotlib.animation import FuncAnimation
 import Config.env_config as econf
 import Config.defaults as df
-from itertools import combinations as pairs
-from multiprocessing import Process, Event
 import time
 import psutil
 
 
 class Env:
     def __init__(self, id=1):
-        # unpack
-        # self.econf = econf
-        # super().__init__()
-        # plt.close()
-        # self.fig, self.ax = plt.subplots()
-        #
         self.gmin = np.min(econf.geofence, axis=0)  # for plotting more than geofence
         self.gmax = np.max(econf.geofence, axis=0)
-        # self.ax.set(xlim=(gmin[0], gmax[0]), ylim=(gmin[1], gmax[1]), aspect='equal')
         self.arena = p.Polygon(econf.geofence, fill=False)
         self.obstacles = [p.Polygon(obs) for obs in econf.obstacles]
         self.temp = df.weather['temperature']
@@ -39,7 +21,6 @@ class Env:
         self.t_update = (df.interval) * (1 + update_corr(df.interval))  # correction term for cpu animation lag
         self.id = id
 
-        #  self.state = np.zeros(len(self.agents), 2)
 
     def add_agents(self, cls, params, seed=None):
         if seed:
@@ -57,7 +38,7 @@ class Env:
                     agent.pos = np.zeros(2)
             agent.scv(-1 + 2 * np.random.rand(), -1 + 2 * np.random.rand())
             if df.wp_flag:
-                agent.scw(0, 0) # default waypoint. use mouseclick to change in real time
+                agent.scw(0, 0)  # default waypoint. use mouseclick to change in real time
             agent.memory.append(agent.get_state())
 
         self.agents = agents
@@ -66,6 +47,8 @@ class Env:
         if seed:
             np.random.seed(seed)
         p = psutil.Process()
+        if df.mp_affinity:
+            p.cpu_affinity([self.id % psutil.cpu_count()])
         print(f'Env-{self.id}: Started on cpu {p.cpu_affinity()} at {time.ctime()[11:-5]}')
         current_frame = 0
         wait_frames = df.wait_time/df.interval
@@ -126,13 +109,6 @@ class Env:
                 self.order_params[4] += int(agent.disc)
                 if frame % 50 == 0 and agent.warnings and df.warning_flag:
                     print(f'Env-{self.id}: Agent-{agent.id} warnings:', *agent.warnings, f'at {time.ctime()[11:-5]}')
-                # if frame % 10 is 0:
-                #     print(f"Env-{self.env.id}:Collision between agent {self.id} and {obstype}")
-
-        # if frame > (df.max_sim_time*1000/df.interval)-10:
-        # if frame % 10 is 0:
-        #     print(frame)
-        # print(frame)
         return count
 
     def move_obstacle(self, i, vec):

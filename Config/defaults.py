@@ -15,13 +15,13 @@ align_flag = True
 wp_flag = False
 animated = True
 opt_flag = False  # flag for optimization
-mp_affinity = True
+mp_affinity = False
 warning_flag = False  # shows earnings every 5 seconds
 
 # [Agent]
 
 # physics
-vmax = 8.0  # m/s
+vmax = 6.0  # m/s
 amax = 6.0  # m2/s
 v_flock = 6.0  # m/s
 v_target = 2.0

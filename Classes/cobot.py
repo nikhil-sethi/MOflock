@@ -54,8 +54,6 @@ class CoBot(bot.Bot):
             v_rep = self.separate(args[0], args[1])
         if df.align_flag:
             v_frict = self.align(args[2], args[3], args[1])
-        # print(self.id, v_rep, v_frict)
-        # pr int(self.id,self.v_d, self.vel)
         self.v_d += v_rep + v_frict
 
     def get_nbors(self):
@@ -78,7 +76,6 @@ class CoBot(bot.Bot):
                 if dist < df.coll_radius:
                     self.phi_coll += 1
                     self.warnings.append(f'Collision with agent {agent.id},  ')
-                    # print(f'Env-{self.env.id}:Collision occurred between agent {self.id} and agent {agent.id}')
         if cluster_count:
             self.phi_corr /= cluster_count
         return nbors

@@ -23,9 +23,6 @@ class Bot(particle.Particle):
         self.conf = paramdict
         self.phi_wall = 0
         self.phi_wall_count = 0
-        # self.artist, = self.env.ax.plot(self.pos[0], self.pos[1], 'ro', markersize=2)
-        # self.ln, = self.env.ax.plot([], [], 'bo', markersize='2')
-        # self.v, = self.env.ax.plot([], [], 'ko', markersize='2')
 
     def get_state(self):
         return self.pos, self.vel
@@ -118,7 +115,7 @@ class Bot(particle.Particle):
                 self.phi_wall += min(temp)
                 self.warnings.append(f'Collision with {obstype}, ')
         else:
-            r0_shill = relu(self.conf["r0_shill"])
+            r0_shill = relu(self.conf["r0_shill"])+1    # just some extra safety
             for obs in obstacles:
                 r_si, v_s = self.sense(obs.get_xy(), obstype, method)
 
