@@ -1,19 +1,13 @@
 '''
-Version: 3.2
+Version: 3.3
 features/corrections added
-- optimization class refined and made much more simpler, no extra class needed and no sub processes now
-- general code cleanup
+- Particle swarm optimizer
+- new order parameter for minimum clusters
+- corrected order parameter calculations for wall, disconnected, clusters
+- corrected cluster radius calculation via brake_decay_inverse function
+
 
 problems
-- A lot of stuff might not be optimized for least complexity
-- bottleneck when both waypoint and obstacle avoidance is on
-- The drones go over obstacles when reaching a waypoint-> There need to be some sort of gains
-
-TODO-other branches
-- RL
-- Cooperation + target detection
-- SITL, ROS etc.
-> paper implementaion essentially ends here. New features will be added in other branches
 
 '''
 
@@ -21,23 +15,15 @@ from Config import defaults, cobot_config, opt_config
 
 from Classes.environment import Env
 from Classes.cobot import CoBot  # a collaborative aerial bot
-from Classes import optimizer
-
+from Classes.optimizer import Optimizer_CMA
+import pickle
 import multiprocessing as mp
 import numpy as np
 from Methods.transfer_funcs import orderparamsTofitness
 from time import perf_counter
 
-# agents[0].scp(0,0)
-# agents[1].scp(-20,0)
-# agents[0].scv(1,1)
-# agents[1].scv(1,0)
-# agents[0].memory.append(agents[0].get_state())
-# agents[1].memory.append(agents[1].get_state())
-
 if __name__ == '__main__':
     if defaults.opt_flag:
-
         parameters = {
             "npop": opt_config.population_size,
             "ngen": opt_config.number_of_generations,
@@ -48,12 +34,20 @@ if __name__ == '__main__':
             "init_vars": opt_config.init_vars,
             "sigma": opt_config.sigma
         }
-        start = perf_counter()
-        opt = optimizer.Optimizer(parameters)
-        opt.run()
-        pops = opt.pops
-        ops = opt.ops
 
+        start = perf_counter()
+        opt = Optimizer_CMA(parameters)
+        opt.run()
+        if defaults.save_data:
+            f = open("opt_pickle", "ab")
+            s = {}
+            s["times"] = opt.times
+            s["fits"] = opt.fits
+            s["pops"] = opt.pops
+            s["ops"] = opt.ops
+            pickle.dump(s, f)
+            #np.savetxt("opt.csv", np.hstack((np.array(opt["pops"]).reshape(3000,11),np.array(opt["ops"]).reshape(3000,6),np.array(opt["fits"]).reshape(3000,1))), delimiter=',')
+            f.close()
         print(f"Total time taken for optimization = {(perf_counter() - start) / 60} minutes")
 
     else:
@@ -68,8 +62,7 @@ if __name__ == '__main__':
         jobs = []
         for i in range(num_envs):
             env = Env(i)
-            genome = [18.13797864, 0.284189019, 27.66904294, 0.228751087, 2.89329558, 4.341461035, 7.310661496,
-                      -11.00204234, 18.62826807, 8.081053292, 4.75371955]
+            genome = [34.1342,	0.2866,	20.366	,0.2657	,3.6581	,7.4869	,9.8308	,-13.838,	15.8349,	8.8114,	5.7284]
             paramdict = dict(zip(cobot_config.paramdict.keys(), genome))
             # paramdict = cobot_config.paramdict  # change this if you want for each environment
             env.add_agents(CoBot, paramdict, seed=defaults.envseed)

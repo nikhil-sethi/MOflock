@@ -17,10 +17,11 @@ class Env:
         self.temp = df.weather['temperature']
         self.wind_speed, self.wind_dir = df.weather['wind_speed'], df.weather['wind_direction']
         self.agents = list()  # everyone on the current map
-        self.order_params = np.zeros(5)
+        self.order_params = np.zeros(7)
         self.t_update = (df.interval) * (1 + update_corr(df.interval))  # correction term for cpu animation lag
         self.id = id
-
+        self.wall_count = 0
+        self.wait_frames = df.wait_time / df.interval
 
     def add_agents(self, cls, params, seed=None):
         if seed:
@@ -32,11 +33,17 @@ class Env:
 
         for i, agent in enumerate(agents):
             agent.id = i
-            agent.scp(self.gmin[0] + 2*self.gmax[1] * np.random.rand(), self.gmin[0] + 2*self.gmax[1] * np.random.rand())
-            for obs in self.obstacles:
-                if agent.inPolygon(obs):
-                    agent.pos = np.zeros(2)
-            agent.scv(-1 + 2 * np.random.rand(), -1 + 2 * np.random.rand())
+            #spawn in bottom left grid
+            x = -100 + 20 * (agent.id % 5)
+            y = -100 + 20 * int(agent.id / 5)
+            agent.scp(x, y)
+            # agent.scp(self.gmin[0] + 2*self.gmax[1] * np.random.rand(), self.gmin[0] + 2*self.gmax[1] * np.random.rand())
+            if df.obs_flag:
+                for obs in self.obstacles:
+                    if agent.inPolygon(obs):
+                        agent.pos = np.zeros(2)
+            agent.scv(1, 2)
+            # agent.scv(-1 + 2 * np.random.rand(), -1 + 2 * np.random.rand())
             if df.wp_flag:
                 agent.scw(0, 0)  # default waypoint. use mouseclick to change in real time
             agent.memory.append(agent.get_state())
@@ -51,14 +58,13 @@ class Env:
             p.cpu_affinity([self.id % psutil.cpu_count()])
         print(f'Env-{self.id}: Started on cpu {p.cpu_affinity()} at {time.ctime()[11:-5]}')
         current_frame = 0
-        wait_frames = df.wait_time/df.interval
-        wall_count = 0.000001  # number of cumulative collisions throughout the simulation
 
         if df.animated:
             self.fig, self.ax = plt.subplots()
             self.fig.set_size_inches(6, 6)
             self.fig.canvas.manager.window.wm_geometry(f"+{200 + self.id * 550}+{200}")
-            self.ax.set(xlim=(self.gmin[0]-20, self.gmax[0]+20), ylim=(self.gmin[1]-20, self.gmax[1]+20), aspect='equal')
+            self.ax.set(xlim=(self.gmin[0] - 20, self.gmax[0] + 20), ylim=(self.gmin[1] - 20, self.gmax[1] + 20),
+                        aspect='equal')
             if df.wp_flag:
                 self.wp_artist, = self.ax.plot([], [], 'bo', markersize='4')
                 self.ax.figure.canvas.mpl_connect('button_release_event', self.change_waypoint)
@@ -70,46 +76,57 @@ class Env:
 
         start = time.time()
         while True:
-            wall_count = self.update(current_frame, wall_count)
-            plt.pause(0.0001)
+            self.update(current_frame)
+            plt.pause(0.001)
             current_frame += 1
             act_time = time.time() - start  # actual time since start of simulation
 
-            if act_time > df.max_sim_time or (self.order_params[3] / ((df.num_agents - 1) / df.num_agents / (current_frame+0.00001-wait_frames))) > 0.01: #or (self.order_params[0] / wall_count) > 0.3:
-                print(f'Env-{self.id}: Ended at at {time.ctime()[11:-5]}: simulation time= {current_frame * df.interval}  actual time taken= {act_time}')
+            if act_time > df.max_sim_time:  # or (self.order_params[3] / ((df.num_agents - 1) / df.num_agents / (current_frame+0.00001-self.wait_frames))) > 0.01: #or (self.order_params[0] / wall_count) > 0.3:
+                print(
+                    f'Env-{self.id}: Ended at at {time.ctime()[11:-5]}: simulation time= {current_frame * df.interval}  actual time taken= {act_time}')
                 # plt.close()
-                if wall_count:
-                    self.order_params[0] /= wall_count
-                self.order_params[1:4] /= (current_frame-wait_frames) * df.num_agents
-                self.order_params[4] /= (current_frame-wait_frames)
+                if self.wall_count:
+                    self.order_params[0] /= self.wall_count
+                self.order_params[1:4] /= (current_frame - self.wait_frames) * df.num_agents
                 self.order_params[3] /= df.num_agents - 1
+                self.order_params[4] /= (current_frame - self.wait_frames)
+                self.order_params[5] -= 1000
+                self.order_params[5] /= (current_frame - self.wait_frames)
+                self.order_params[6] = current_frame * df.interval
                 return self.order_params
 
             time.sleep(df.interval - act_time % df.interval)
 
-    def update(self, frame, count):
-        wait_frames = df.wait_time/df.interval
+    def update(self, frame):
+
         if df.animated:
             for agent in self.agents:
                 agent.artist.set_data(agent.pos[0], agent.pos[1])
                 # agent.ln.set_data(agent.pos + agent.v_d)
                 # agent.ln.set_data(agent.waypoint)
 
-        for agent in self.agents:
-            agent.update(df.interval, frame)
-
-            # calculate order parameters for optimization
-            if frame > wait_frames:  # give 15 seconds to sort shit out
+        if frame > self.wait_frames:  # give 15 seconds to sort shit out
+            n_min = 1000  # just a random large number
+            n_disc = 0
+            for agent in self.agents:
+                agent.update(df.interval, frame)
+                # calculate order parameters for optimization
                 self.order_params[0] += agent.phi_wall
-                if not agent.phi_wall:
-                    count += 1
+                self.wall_count += agent.outside
                 self.order_params[1] += agent.phi_vel
                 self.order_params[2] += agent.phi_corr
                 self.order_params[3] += agent.phi_coll
-                self.order_params[4] += int(agent.disc)
-                if frame % 50 == 0 and agent.warnings and df.warning_flag:
+                n_disc += int(agent.disc)
+                n_min = min(agent.cluster_count, n_min)
+                if frame % 10 == 0 and agent.warnings and df.warning_flag:
                     print(f'Env-{self.id}: Agent-{agent.id} warnings:', *agent.warnings, f'at {time.ctime()[11:-5]}')
-        return count
+            # if n_disc > 0:
+            #     print(frame, n_disc)
+            self.order_params[4] += n_disc
+            self.order_params[5] += n_min
+        else:
+            for agent in self.agents:
+                agent.update(df.interval, frame)
 
     def move_obstacle(self, i, vec):
         self.obstacles[i].set_xy(self.obstacles[i].get_xy() + vec)
@@ -122,8 +139,9 @@ class Env:
 
     def plot_static(self):
         '''plot static things on the axes'''
-        for obs in self.obstacles:
-            self.ax.add_patch(obs)
+        if df.obs_flag:
+            for obs in self.obstacles:
+                self.ax.add_patch(obs)
         self.ax.add_patch(self.arena)
 
     def change_waypoint(self, event):
@@ -131,4 +149,3 @@ class Env:
         for agent in self.agents:
             agent.waypoint = waypoint
         self.wp_artist.set_data(waypoint[0], waypoint[1])
-

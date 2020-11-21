@@ -13,10 +13,11 @@ wall_flag = True
 sep_flag = True
 align_flag = True
 wp_flag = False
-animated = True
-opt_flag = False  # flag for optimization
+animated = False
+opt_flag = True  # flag for optimization
 mp_affinity = False
 warning_flag = False  # shows earnings every 5 seconds
+save_data = False
 
 # [Agent]
 
