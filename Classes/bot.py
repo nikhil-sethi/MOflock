@@ -22,7 +22,7 @@ class Bot(particle.Particle):
         self.env = env
         self.conf = paramdict
         self.phi_wall = 0
-        self.phi_wall_count = 0
+        self.wall_count = 0
 
     def get_state(self):
         return self.pos, self.vel
@@ -42,6 +42,7 @@ class Bot(particle.Particle):
         v_wp = np.zeros(2)
         v_wp_mag = 0
         self.phi_wall = 0
+        self.outside = 0
         if df.obs_flag:
             v_shill_obstacle = self.avoid(self.env.obstacles, 'obstacle')
         if df.wall_flag:
@@ -50,15 +51,17 @@ class Bot(particle.Particle):
             #     v_shill_wall = -2 * v_shill_wall
         if df.wp_flag:
             v_wp, v_wp_mag = unit_vector(self.goto(self.waypoint))
-        self.v_d += min(v_wp_mag, df.v_target)*v_wp + v_shill_obstacle + v_shill_wall + df.v_flock * unit_vector(self.vel)[0]
+        self.v_d += min(v_wp_mag, df.v_target) * v_wp + v_shill_obstacle + v_shill_wall + df.v_flock * \
+                    unit_vector(self.vel)[0]
 
     def sense(self, obstacle, obstype, method, index=1):
         if method == 'perpendicular':
             v_s = vectorFromPolygon(self.pos, obstacle)  # shill vector from obstacle to position
             # this condition below smooths the repulsion at corners avoiding the conflict at equal distance walls
-            if obstype is 'arena' and np.all(abs(self.pos) > 0.8 * obstacle[1][0]):  # TODO: change second condition to obstacle.get_xy()?
+            if obstype is 'arena' and np.all(
+                    abs(self.pos) > 0.8 * obstacle[1][0]):  # TODO: change second condition to obstacle.get_xy()?
                 com = np.sum(obstacle[:-1, :], axis=0) / len(obstacle)
-                v_s = 1.5*(com - self.pos)
+                v_s = 1.5 * (com - self.pos)
 
             v_s, r_is = unit_vector(v_s)  # distance from obstacle
             return r_is, self.conf["v_shill"] * v_s
@@ -73,7 +76,7 @@ class Bot(particle.Particle):
 
         elif method is 'center_square_approx':
             assert obstype != 'obstacle', "'center square' method is only valid for arena type objects. Select the 'center circle' or 'perpendicular' method"
-            if not self.inPolygon(obstacle,factor=1.2):
+            if not self.inPolygon(obstacle, factor=1.2):
                 com = np.sum(obstacle[:-1, :], axis=0) / len(obstacle)
                 v_s = com - self.pos
                 r_i_com = norm(v_s)  # distance from COM
@@ -101,10 +104,11 @@ class Bot(particle.Particle):
         # can be modeled as a discrete points as well
         v_si = np.zeros(2)
         if obstype is 'arena':
-            temp = []
+            temp = 10000
             for i in range(2):  # for each component
                 r_si, v_s = self.sense(obstacles[0].get_xy(), obstype, method, i)
-                temp.append(r_si)
+                if r_si < temp:
+                    temp = r_si
 
                 v_smax = brake_decay(r_si - self.conf["r0_shill"], self.conf["a_shill"], self.conf["p_shill"])
                 v_si_mag = norm(v_s - self.vel)
@@ -112,10 +116,11 @@ class Bot(particle.Particle):
                     v_si += (v_si_mag - v_smax) * (v_s - self.vel) / v_si_mag
 
             if not self.inPolygon(obstacles[0]):
-                self.phi_wall += min(temp)
+                self.phi_wall += temp
+                self.outside = 1
                 self.warnings.append(f'Collision with {obstype}, ')
         else:
-            r0_shill = relu(self.conf["r0_shill"])+1    # just some extra safety
+            r0_shill = relu(self.conf["r0_shill"]) + 1  # just some extra safety
             for obs in obstacles:
                 r_si, v_s = self.sense(obs.get_xy(), obstype, method)
 
@@ -140,7 +145,7 @@ class Bot(particle.Particle):
             self.waypoint = np.array([args[0], args[1]])
 
     def goto(self, waypoint):
-        toWP = waypoint-self.localcom
+        toWP = waypoint - self.localcom
         unit_to_WP, dist_to_WP = unit_vector(toWP)
         # target_mag = brake_decay(dist_to_WP - 30, 5.54, 3.32)
         target_flag = sigmoid_brake(dist_to_WP, 0, 2)
@@ -151,7 +156,7 @@ class Bot(particle.Particle):
 
         if waypoint is None:
             return 0
-        return df.v_target*(target_flag * unit_to_WP + com_flag * unit_to_COM)
+        return df.v_target * (target_flag * unit_to_WP + com_flag * unit_to_COM)
 
     def inPolygon(self, polygon, factor=1.):
         return polygon.get_path().contains_point(factor * self.pos)

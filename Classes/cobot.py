@@ -1,6 +1,6 @@
 import numpy as np
 from Classes import bot
-from Methods.controls import brake_decay, add_innernoise, packet_lost
+from Methods.controls import brake_decay, add_innernoise, packet_lost, brake_decay_inverse
 from Methods.vector_algebra import norm
 import Config.defaults as df
 
@@ -11,9 +11,10 @@ class CoBot(bot.Bot):
         self.memory = []
         self.phi_coll = 0
         self.phi_corr = 0
+        self.phi_corr = 0
         self.phi_vel = 0
         super().__init__(env, paramdict)
-        self.r_cluster = max(self.conf["r0_rep"], self.conf["r0_frict"] + float(brake_decay(df.v_flock, self.conf["a_frict"], self.conf["p_frict"])))
+        self.r_cluster = max(self.conf["r0_rep"], self.conf["r0_frict"] + brake_decay_inverse(df.v_flock, self.conf["a_frict"], self.conf["p_frict"]))
 
     def update(self, step, frame):
         self.warnings = []
@@ -22,13 +23,6 @@ class CoBot(bot.Bot):
                            df.gps_del)
 
         self.nbors = self.get_nbors()
-        if not self.nbors:
-            self.disc = True  # used for the disconnection order parameter
-            self.warnings.append("Disconnected,  ")
-            # print(f'Env-{self.env.id}: Agent {self.id} disconnected')
-        else:
-            self.disc = False
-
         # print(self.id, len(self.nbors))
         if frame >= (df.comm_del / step):
             self.memory = self.memory[1:]
@@ -63,21 +57,24 @@ class CoBot(bot.Bot):
         # nbors_bool = self_bool & (rji_mag < df.comm_radius)
         # return np.array(self.env.agents)[nbors_bool]
         nbors = []
-        cluster_count = 0
+        self.cluster_count = 0
         self.phi_corr = 0
-        self.phi_coll = 0
         for agent in self.env.agents:
             dist = norm(agent.pos - self.pos)
             if 0 < dist < self.r_cluster:
                 self.phi_corr += self.vel.dot(agent.vel) / norm(self.vel) / norm(agent.vel)
-                cluster_count += 1
+                self.cluster_count += 1
             if 0 < dist < df.comm_radius and not packet_lost(dist):
                 nbors.append(agent)
                 if dist < df.coll_radius:
                     self.phi_coll += 1
                     self.warnings.append(f'Collision with agent {agent.id},  ')
-        if cluster_count:
-            self.phi_corr /= cluster_count
+        if self.cluster_count:
+            self.phi_corr /= self.cluster_count
+            self.disc = False
+        else:
+            self.disc = True
+            self.warnings.append("Disconnected,  ")
         return nbors
 
     def get_noisedState(self):

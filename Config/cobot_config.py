@@ -5,7 +5,7 @@
 # 0
 r0_rep = 41.1  # metres   # take more than double of your 'safe' distance (depends on gain + noise though)
 # 1
-p_rep = 0.07
+p_rep = 0.1
 # 2
 r0_frict = 88.5  # best to keep this around comm range(do the best alignment possible under comm range)
 '''Stopping point offset of alignment. The distance of the stopping point in front of

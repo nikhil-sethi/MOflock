@@ -7,7 +7,7 @@ def update_corr(x):
     """correction equation for the t_update update. weight and bias will depend on CPU"""
     return math.exp(-2 * math.log10(x) + 2)
 
-def sigmoid(x, x_o, d):
+def sigmoid_decay(x, x_o, d):
     if x < x_o-d:
         return 1
     elif x_o-d < x < x_o:
@@ -43,6 +43,12 @@ def brake_decay(r, a, p):
         arr[r < (a / p ** 2)] *= p
         arr[r >= (a / p ** 2)] = np.sqrt((2 * a * arr[r >= (a / p ** 2)]) - (a / p) ** 2)
     return arr
+
+def brake_decay_inverse(v,a,p):
+    if v < (a / p ):
+        return v/p
+    else:
+        return (v**2+(a/p)**2)/(2*a)
 
 def add_innernoise(gpos, gvel, sigma, deltaT, lam =0.1):
     force = -(np.sqrt(2*lam*sigma)/3)*deltaT*gpos
