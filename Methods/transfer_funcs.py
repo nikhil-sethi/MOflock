@@ -14,7 +14,7 @@ def f3(phi, a):
     """sharp peak"""
     return a**2/(phi + a)**2
 
-def orderparamsTofitness(op_array):
+def optofitness(op_array, n_obj=1):
     """apply respective transfer functions to an array of order parameters
        **order of elements matters
     """
@@ -27,4 +27,7 @@ def orderparamsTofitness(op_array):
         f_corr = op_array[2]
     else:
         f_corr = 0
-    return -(1-sigmoid_decay(op_array[6], df.max_sim_time-df.wait_time, 200))*f_speed*f_coll*f_disc*f_wall*f_corr*f_cluster
+    time_fit =1 # (1-sigmoid_decay(op_array[6], df.max_sim_time-df.wait_time, 200))
+    if n_obj==2:
+        return -time_fit*f_speed*f_corr*f_disc*f_cluster, -time_fit*f_wall*f_coll
+    return -time_fit*f_speed*f_coll*f_disc*f_wall*f_corr*f_cluster

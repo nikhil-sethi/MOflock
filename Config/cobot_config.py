@@ -5,7 +5,7 @@
 # 0
 r0_rep = 41.1  # metres   # take more than double of your 'safe' distance (depends on gain + noise though)
 # 1
-p_rep = 0.1
+p_rep = 0.07
 # 2
 r0_frict = 88.5  # best to keep this around comm range(do the best alignment possible under comm range)
 '''Stopping point offset of alignment. The distance of the stopping point in front of
@@ -44,9 +44,9 @@ levels.'''
 
 # Bot parameters
 r0_shill = 0.5
-v_shill = 13 #14  # higher means faster shilling
-a_shill = 5.44  # higher means delayed but sharper shilling (a is the slope), lower is smoother
-p_shill = 3.32  # higher means delayed and sharper and linear curve below a/p^2
+v_shill = 19.7 #14  # higher means faster shilling
+a_shill = 3.54  # higher means delayed but sharper shilling (a is the slope), lower is smoother
+p_shill = 5.44  # higher means delayed and sharper and linear curve below a/p^2
 
 paramdict = dict(
     r0_rep=r0_rep,

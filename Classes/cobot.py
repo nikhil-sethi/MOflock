@@ -11,7 +11,6 @@ class CoBot(bot.Bot):
         self.memory = []
         self.phi_coll = 0
         self.phi_corr = 0
-        self.phi_corr = 0
         self.phi_vel = 0
         super().__init__(env, paramdict)
         self.r_cluster = max(self.conf["r0_rep"], self.conf["r0_frict"] + brake_decay_inverse(df.v_flock, self.conf["a_frict"], self.conf["p_frict"]))
@@ -59,6 +58,7 @@ class CoBot(bot.Bot):
         nbors = []
         self.cluster_count = 0
         self.phi_corr = 0
+        self.phi_coll = 0
         for agent in self.env.agents:
             dist = norm(agent.pos - self.pos)
             if 0 < dist < self.r_cluster:
@@ -71,9 +71,9 @@ class CoBot(bot.Bot):
                     self.warnings.append(f'Collision with agent {agent.id},  ')
         if self.cluster_count:
             self.phi_corr /= self.cluster_count
-            self.disc = False
+            self.disc = 0
         else:
-            self.disc = True
+            self.disc = 1
             self.warnings.append("Disconnected,  ")
         return nbors
 

@@ -20,9 +20,10 @@ class Bot(particle.Particle):
         self.waypoint = None
         self.localcom = self.pos
         self.env = env
-        self.conf = paramdict
+        self.conf = self.env.params
         self.phi_wall = 0
         self.wall_count = 0
+        self.outside = 0
 
     def get_state(self):
         return self.pos, self.vel
@@ -116,7 +117,7 @@ class Bot(particle.Particle):
                     v_si += (v_si_mag - v_smax) * (v_s - self.vel) / v_si_mag
 
             if not self.inPolygon(obstacles[0]):
-                self.phi_wall += temp
+                self.phi_wall += -temp
                 self.outside = 1
                 self.warnings.append(f'Collision with {obstype}, ')
         else:
