@@ -2,14 +2,14 @@
 
 import numpy as np
 from Classes import particle
-from Methods.controls import brake_decay, add_outernoise, sigmoid_brake
-from Methods.vector_algebra import vectorFromPolygon, unit_vector, norm, relu
+from Utils.controls import brake_decay, add_outernoise, sigmoid_brake, brake_decay_scalar
+from Utils.vector_algebra import vectorFromPolygon, unit_vector, norm, relu
 import Config.defaults as df
 
 
 class Bot(particle.Particle):
 
-    def __init__(self, env, paramdict):
+    def __init__(self, env):
         super().__init__()
         self.id = None
         self.warnings = []
@@ -22,22 +22,24 @@ class Bot(particle.Particle):
         self.env = env
         self.conf = self.env.params
         self.phi_wall = 0
+        self.phi_target = 0
         self.wall_count = 0
         self.outside = 0
 
     def get_state(self):
-        return self.pos, self.vel
+        return self.pos.copy(), self.vel.copy()
 
     def update(self, step, frame):
-
-        add_outernoise(self.vel, df.sigma_outer, step)
-        self.acc += self.v_d - self.vel - self.gps_vel
-
         super().update(step, frame)
+        self.memory.append(self.get_state())
+        if frame >= (df.memory_len / step):
+            self.memory = self.memory[1:]
+        add_outernoise(self.vel, df.sigma_outer, step)
+        self.phi_vel = norm(self.vel)
 
         # self.ln.set_data(self.pos + self.acc)
 
-    def calcDesiredVelocity(self):
+    def calcDesiredVelocity(self, *args):
         v_shill_obstacle = 0
         v_shill_wall = 0
         v_wp = np.zeros(2)
@@ -52,14 +54,16 @@ class Bot(particle.Particle):
             #     v_shill_wall = -2 * v_shill_wall
         if df.wp_flag:
             v_wp, v_wp_mag = unit_vector(self.goto(self.waypoint))
-        self.v_d += min(v_wp_mag, df.v_target) * v_wp + v_shill_obstacle + v_shill_wall + df.v_flock * \
-                    unit_vector(self.vel)[0]
+        v_norm = df.v_flock*unit_vector(self.vel)[0]
+        self.v_d += min(v_wp_mag, df.v_target) * v_wp + v_shill_obstacle + v_shill_wall + v_norm
+        # print("v_arena=", v_shill_wall," mag=", norm(v_shill_wall))
+        # print(self.id, "v_norm=",norm(v_norm)," v_wall= ", norm(v_shill_wall))
 
     def sense(self, obstacle, obstype, method, index=1):
         if method == 'perpendicular':
             v_s = vectorFromPolygon(self.pos, obstacle)  # shill vector from obstacle to position
             # this condition below smooths the repulsion at corners avoiding the conflict at equal distance walls
-            if obstype is 'arena' and np.all(
+            if obstype == 'arena' and np.all(
                     abs(self.pos) > 0.8 * obstacle[1][0]):  # TODO: change second condition to obstacle.get_xy()?
                 com = np.sum(obstacle[:-1, :], axis=0) / len(obstacle)
                 v_s = 1.5 * (com - self.pos)
@@ -75,7 +79,7 @@ class Bot(particle.Particle):
             v_s[index] = toCenter[index]
             return r_si, self.conf["v_shill"] * unit_vector(v_s)[0]
 
-        elif method is 'center_square_approx':
+        elif method == 'center_square_approx':
             assert obstype != 'obstacle', "'center square' method is only valid for arena type objects. Select the 'center circle' or 'perpendicular' method"
             if not self.inPolygon(obstacle, factor=1.2):
                 com = np.sum(obstacle[:-1, :], axis=0) / len(obstacle)
@@ -86,7 +90,7 @@ class Bot(particle.Particle):
                 return abs(r_is), self.conf["v_shill"] * v_s / r_i_com
             return 0, 0
 
-        elif method is 'center_circle':
+        elif method == 'center_circle':
             com = np.sum(obstacle[:-1, :], axis=0) / len(obstacle)
             v_s = com - self.pos
             r_i_com = norm(v_s)  # distance from COM
@@ -104,17 +108,18 @@ class Bot(particle.Particle):
         # this is a more exact method which loops over all obstacles
         # can be modeled as a discrete points as well
         v_si = np.zeros(2)
-        if obstype is 'arena':
+        if obstype == 'arena':
             temp = 10000
             for i in range(2):  # for each component
                 r_si, v_s = self.sense(obstacles[0].get_xy(), obstype, method, i)
                 if r_si < temp:
                     temp = r_si
 
-                v_smax = brake_decay(r_si - self.conf["r0_shill"], self.conf["a_shill"], self.conf["p_shill"])
                 v_si_mag = norm(v_s - self.vel)
+                v_smax = brake_decay_scalar(r_si, self.conf["p_shill"], self.conf["a_shill"], v_si_mag, self.conf["r0_shill"])
+
                 if v_si_mag > v_smax:
-                    v_si += (v_si_mag - v_smax) * (v_s - self.vel) / v_si_mag
+                    v_si += self.conf["c_shill"]*(v_si_mag - v_smax) * (v_s - self.vel) / v_si_mag
 
             if not self.inPolygon(obstacles[0]):
                 self.phi_wall += -temp
@@ -154,13 +159,13 @@ class Bot(particle.Particle):
         unit_to_COM, dist_to_COM = unit_vector(toCOM)
         # com_mag = brake_decay(dist_to_COM - 20, 5.54, 3.32)
         com_flag = sigmoid_brake(dist_to_COM, 40, 4)
-
+        self.phi_target = dist_to_WP
         if waypoint is None:
             return 0
         return df.v_target * (target_flag * unit_to_WP + com_flag * unit_to_COM)
 
     def inPolygon(self, polygon, factor=1.):
-        return polygon.get_path().contains_point(factor * self.pos)
+        return polygon.contains_point(factor * self.pos)
 
     '''
     def land(self):

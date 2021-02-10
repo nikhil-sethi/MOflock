@@ -44,10 +44,10 @@ levels.'''
 
 # Bot parameters
 r0_shill = 0.5
-v_shill = 19.7 #14  # higher means faster shilling
+v_shill = 19.7  #14  # higher means faster shilling
 a_shill = 3.54  # higher means delayed but sharper shilling (a is the slope), lower is smoother
 p_shill = 5.44  # higher means delayed and sharper and linear curve below a/p^2
-
+c_shill = 1
 paramdict = dict(
     r0_rep=r0_rep,
     p_rep=p_rep,
@@ -59,7 +59,8 @@ paramdict = dict(
     r0_shill=r0_shill,
     v_shill=v_shill,
     a_shill=a_shill,
-    p_shill=p_shill
+    p_shill=p_shill,
+    c_shill=c_shill
 )
 
 # {

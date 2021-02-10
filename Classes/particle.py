@@ -1,5 +1,5 @@
-from Methods.vector_algebra import unit_vector, absheading_from_vec
-from Methods.controls import norm
+from Utils.vector_algebra import unit_vector, absheading_from_vec
+from Utils.controls import norm
 import numpy as np
 import Config.defaults as df
 
@@ -14,18 +14,21 @@ class Particle:
         maxForce
     position : initial position, default
     '''
-    def __init__(self, position=np.zeros(2), velocity=np.zeros(2), acceleration=np.zeros(2), animated=True):
 
-        self.pos = np.array(position, dtype=float)
-        self.vel = np.array(velocity, dtype=float)
-        self.acc = acceleration
-        self.animated = animated
+    def __init__(self):
+        self.pos = np.zeros(2, dtype=float)
+        self.vel = np.zeros(2, dtype=float)
+        self.prevel = np.zeros(2, dtype=float)
+        self.acc = np.zeros(2, dtype=float)
 
     def update(self, step, frame):
-        self.vel += step*unit_vector(self.acc)[0] * min(norm(self.acc), df.amax)
-        #print(self.vel,self.acc)
-        self.vel = unit_vector(self.vel)[0] * min(norm(self.vel), df.vmax)
+        self.acc = self.v_d - self.vel - self.gps_vel  # self.memory[-1][1]
+        self.vel += unit_vector(self.acc)[0] * min(norm(self.acc), df.amax) * step
         self.pos += self.vel * step
+        # print(self.vel,self.acc)
+        # self.vel = unit_vector(self.vel)[0] * min(norm(self.vel), df.vmax)
+
+        # self.prevel = self.vel
         self.acc = np.zeros(2)
 
     # control methods
@@ -51,10 +54,10 @@ class Particle:
 
     def sca(self, x, y=None):
         if y is None:
-            y=x
+            y = x
         self.acc = np.array([x, y], dtype=float)
 
-    #getters
+    # getters
     def gch(self, mode='cartesian'):
         """return absolute heading"""
         return absheading_from_vec(self.vel, mode)
@@ -68,5 +71,4 @@ class Particle:
 
 def set_all(seq, method, *args, **kwargs):
     for obj in seq:
-         getattr(obj, method)(*args, **kwargs)
-
+        getattr(obj, method)(*args, **kwargs)

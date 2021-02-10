@@ -38,6 +38,7 @@ main
                 if time to refresh gps
                     get preferred velocity
                         vd= v_flock+v_obs +v_wall + v_rep + v_frict
+                        vd= unit(vd)*v_flock
                     acc= vd- velocity
                     velocity += timestep* min(acc, amax)
             add outer noise (wind)
