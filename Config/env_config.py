@@ -4,7 +4,7 @@ import numpy as np
 geofence = np.array([[-250, -250],  #bottom left
                     [250, -250],
                     [250, 250],
-                    [-250, 250]])     # top left
+                    [-250, 250]])//1    # top left
 
 # [obstacles]
 '''is a dictionary of obstacles with each obstacle as matrix of points[x,y] in CCW manner'''

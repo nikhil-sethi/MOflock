@@ -1,14 +1,14 @@
 # [simulation]
-num_agents = 30
+num_agents = 10
 num_envs = 1  # = maximum number of processors if 0 or greater than max processors ;  =1 if -1
 max_sim_time = 600  # seconds
-speedup =  7  # BEWARE! Using a high value will result in loss of simulation time. depends on animation, cpu usage etc.
+speedup = 7  # BEWARE! Using a high value will result in loss of simulation time. depends on animation, cpu usage etc.
 wait_time = 0  # seconds to wait before doing any order parameter calculation
 interval = 0.1  # time in seconds between each update
-envseed = 13  # None: seed=random ; 'id': seed=env.id ; k: seed=k
+envseed = 'id'  # None: seed=random ; 'id': seed=env.id ; k: seed=k
 optimizer = "CMA-ES"  # ("CMA-ES","PSO", "NSGA2")
 pg_scale = 1  # pixels per unit length    pg_scale=
-bound_tol = 40  # metres
+bound_tol = 100 # metres
 n_clusters = 1
 start_loc = 0, 0
 start_sep = 10
@@ -36,7 +36,7 @@ v_target = 2.0
 # sensors
 gps_del = 0.2  # seconds
 sigma_inner = 0.005  # m2/s2
-memory_len = 1
+memory_len = 5
 comm_del = 1  # s
 comm_radius = 100.0  # m
 coll_radius = 3.0

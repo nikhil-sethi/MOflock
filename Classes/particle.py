@@ -20,6 +20,8 @@ class Particle:
         self.vel = np.zeros(2, dtype=float)
         self.prevel = np.zeros(2, dtype=float)
         self.acc = np.zeros(2, dtype=float)
+        self.gps_vel = np.zeros(2, dtype=float)
+        self.v_d = np.zeros(2, dtype=float)
 
     def update(self, step, frame):
         self.acc = self.v_d - self.vel - self.gps_vel  # self.memory[-1][1]
@@ -31,6 +33,19 @@ class Particle:
         # self.prevel = self.vel
         self.acc = np.zeros(2)
 
+    def update2(self, step, frame):
+        pre_acc = self.acc
+        self.acc  = self.v_d - self.vel - self.gps_vel  # self.memory[-1][1]
+        
+        int_acc = (self.acc + pre_acc)/2
+        
+        pre_vel = self.vel
+        self.vel += int_acc * step
+        # unit_vector(self.acc)[0] * min(norm(self.acc), df.amax) * step
+    
+        int_vel = (self.vel + pre_vel)/2
+        self.pos += int_vel * step
+        
     # control methods
     def push(self, force, maxForce: float):
         """apply a force in give direction on the particle"""

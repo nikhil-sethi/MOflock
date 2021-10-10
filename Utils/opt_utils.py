@@ -14,8 +14,7 @@ def setup_envs(pop, seed, q):
     for i in range(len(pop)):
         genome = pop[i]
         paramdict = dict(zip(cf.paramdict.keys(), genome))
-        env \
-            = Env(paramdict, seed)
+        env = Env(paramdict, seed)
         env.add_agents(CoBot)
         envs.append((env, q))
     return envs

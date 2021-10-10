@@ -16,21 +16,21 @@ BLACK = WHITE - 255
 RED = np.array([255, 0, 0])
 BLUE = np.array([0, 0, 255])
 
-REDp = np.clip(RED-50,0,None)
-REDpp = np.clip(RED-80,0,None)
-REDppp = np.clip(RED-105,0,None)
-REDpppp= np.clip(RED-130,0,None)
-REDm = np.clip(RED+50,None,255)
-REDmm = np.clip(RED+80,None,255)
-REDmmm = np.clip(RED+135,None,255)
-REDmmmm= np.clip(RED+200,None,255)
+REDp = np.clip(RED - 50, 0, None)
+REDpp = np.clip(RED - 80, 0, None)
+REDppp = np.clip(RED - 105, 0, None)
+REDpppp = np.clip(RED - 130, 0, None)
+REDm = np.clip(RED + 50, None, 255)
+REDmm = np.clip(RED + 80, None, 255)
+REDmmm = np.clip(RED + 135, None, 255)
+REDmmmm = np.clip(RED + 200, None, 255)
 
-BLUEp = np.clip(BLUE - 50,0,None)
-BLUEpp = np.clip(BLUE - 100,0,None)
-BLUEm = np.clip(BLUE + 50,None,255)
-BLUEmm = np.clip(BLUE + 100,None,255)
-BLUEmmm = np.clip(BLUE+135,None,255)
-BLUEmmmm= np.clip(BLUE+200,None,255)
+BLUEp = np.clip(BLUE - 50, 0, None)
+BLUEpp = np.clip(BLUE - 100, 0, None)
+BLUEm = np.clip(BLUE + 50, None, 255)
+BLUEmm = np.clip(BLUE + 100, None, 255)
+BLUEmmm = np.clip(BLUE + 135, None, 255)
+BLUEmmmm = np.clip(BLUE + 200, None, 255)
 
 m = mp.Manager()
 # q1 = mp.SimpleQueue()
@@ -49,16 +49,17 @@ colormmmm = [REDmmmm, BLUEmmmm]
 
 clock = pygame.time.Clock()
 
+
 gmax = geofence.max()
 bound_rect = (
     df.pg_scale * df.bound_tol, df.pg_scale * df.bound_tol,
     *(df.pg_scale * (geofence.max(axis=0) - geofence.min(axis=0))))
 
-
 def run_game(q):
+    target_img = pygame.image.load('target.png')
     os.environ['SDL_VIDEO_WINDOW_POS'] = "%d,%d" % (2500, 0)
     surface = pygame.display.set_mode((df.pg_scale * (geofence.max(axis=0) - geofence.min(axis=0) + 2 * df.bound_tol)))
-
+    cw=(0,0)
     start = time.time()
     act_time = 0
     max_actual_time = df.max_sim_time / df.speedup
@@ -71,12 +72,10 @@ def run_game(q):
     while act_time < max_actual_time:
         # if current_frame % 5 == 0:
         # surface.fill((0, 0, 0))
-        for e in pygame.event.get():
-            if e.type==pygame.MOUSEBUTTONUP:
-                pygame.image.save(surface, f"screenshot{act_time}.png")
+
         for _ in range(speedup):
             agents = []
-            surface.fill(WHITE)
+            surface.fill(WHITE)    
             pygame.draw.rect(surface, (170, 170, 170), bound_rect, 1)
             current_frame += 1
             try:
@@ -87,8 +86,20 @@ def run_game(q):
             # q[0].task_done()
             # q[1].task_done()
             # agents = q.get()
+            for e in pygame.event.get():
+                if e.type == pygame.MOUSEBUTTONUP:
+                    # pygame.image.save(surface, f"screenshot{act_time}.png")
+                    screen_pos = pygame.mouse.get_pos()                
+                    cw = -transform @ (df.pg_scale *(gmax + df.bound_tol)- screen_pos ).astype('int')//(df.pg_scale**2)
+            q[0].put(cw)
+            q[1].put(cw)
+            # surface.blit(target_img, (transform @ agents[0].waypoint + df.pg_scale * (gmax + df.bound_tol)).astype('int'))            
+            pygame.draw.circle(surface,(255, 205, 0),
+                               (transform @ agents[0].waypoint + df.pg_scale * (gmax + df.bound_tol)).astype('int'), 8)
+                               
             for agent in agents:
                 eid = agent.env.id
+                agent.scw(cw[0], cw[1])
                 pygame.draw.circle(surface, tuple(color[eid]),
                                    (transform @ agent.pos + df.pg_scale * (gmax + df.bound_tol)).astype('int'),
                                    4)
@@ -138,6 +149,8 @@ def run_game(q):
                                        1)
                 except IndexError:
                     pass
+            
+        
             pygame.display.flip()
         act_time = time.time() - start  # actual time since start of simulation
         clock.tick(1 / interval)
@@ -146,16 +159,15 @@ def run_game(q):
 
 
 import threading
+cw=(0,0)
 
 # pop = np.array([list(cf.paramdict.values())
-pop = np.array([[3.13791389e+01, 5.88404323e-02, 6.19661687e+01,
-                 6.94702705e+00, 1.81474582e+00, 3.30122333e-01,
-                 1.77654583e-01, -1.94089572e+00, 1.29068772e+01,
-                 3.54015072e+00, 5.43638404e+00, 3.48881247e-01],
-                [3.26168002e+01, 2.25248339e-02, 5.91091630e+01,
-                 8.18629996e+00, 3.30108761e+00, 1.66213931e+00,
-                 3.72514451e-02, -6.58828690e+00, 1.29394850e+01,
-                 3.54767023e+00, 5.43828556e+00, 7.41399626e-01]])
+pop = np.array([[  3.36971443e+01,  2.36834330e-02,  5.92608031e+01,  5.38039876e+00,
+        4.62063792e+00,  1.73348260e+00,  3.52457821e-02, -2.45024732e+00,
+        1.29383823e+01,  4.84342556e+00,  4.83207547e+00,  5.55573940e-01],
+                   [  3.34531599e+01,  2.84441546e-02,  5.89520177e+01,  8.22330460e+00,
+        2.67682789e+00,  3.00404844e-01,  1.84166142e-01, -2.13483170e-01,
+        1.29389626e+01,  2.57143904e+00,  1.30148574e+00,  4.31371072e-01]])
 seed = 264
 envs = setup_envs(pop, seed, qs)
 t = threading.Thread(target=run_game, args=(qs,))

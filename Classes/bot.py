@@ -13,7 +13,7 @@ class Bot(particle.Particle):
         super().__init__()
         self.id = None
         self.warnings = []
-
+        self.memory = []
         self.v_d = np.zeros(2)
         self.gps_pos = np.zeros(2)
         self.gps_vel = np.zeros(2)
@@ -56,6 +56,8 @@ class Bot(particle.Particle):
             v_wp, v_wp_mag = unit_vector(self.goto(self.waypoint))
         v_norm = df.v_flock*unit_vector(self.vel)[0]
         self.v_d += min(v_wp_mag, df.v_target) * v_wp + v_shill_obstacle + v_shill_wall + v_norm
+        
+        self.v_d = unit_vector(self.v_d)[0] *min(norm(self.v_d), df.vmax)#df.v_flock  #
         # print("v_arena=", v_shill_wall," mag=", norm(v_shill_wall))
         # print(self.id, "v_norm=",norm(v_norm)," v_wall= ", norm(v_shill_wall))
 

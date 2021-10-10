@@ -1,3 +1,4 @@
+from typing import Tuple
 import numpy as np
 from Utils.controls import update_corr
 import matplotlib.patches as p
@@ -35,6 +36,7 @@ class Env:
         self.op_ranges = np.array([df.r_tol, df.v_flock, 1, df.a_tol, df.num_agents / 5, df.num_agents])
         self.map_layer = np.zeros(2*self.gmax)
         self.params=params
+        self.bound_rect = (df.pg_scale * df.bound_tol, df.pg_scale * df.bound_tol, *(df.pg_scale * (self.gmax - self.gmin)))
         if seed is None:
             seed = np.random.randint(0, 10000)
         elif seed == 'id':
@@ -73,9 +75,9 @@ class Env:
                         agent.pos = np.zeros(2)
 
             if df.wp_flag:
-                agent.scw(-220, -220)  # default waypoint. use mouseclick to change in real time
+                agent.scw(0, 0)  # default waypoint. use mouseclick to change in real time
                 if self.id==1:
-                    agent.scw(220, 220)
+                    agent.scw(0, 0)
             agent.scp(x, y)
             self.clusters[i % df.n_clusters].append(agent)
 
@@ -109,9 +111,7 @@ class Env:
         for sl in self.sliders:
             self.params[sl.label.get_text()] = sl.val
 
-    def run(self,q=None):
-
-
+    def run(self, q=None):
         p = psutil.Process()
 
         if df.mp_affinity:
@@ -121,15 +121,15 @@ class Env:
         if df.animated:
             pygame.init()
             # pygame.display.set
-            os.environ['SDL_VIDEO_WINDOW_POS'] = "%d,%d" % (0+self.id*(df.pg_scale * (self.gmax[0] - self.gmin[0] + 2 * df.bound_tol)), 0)
-            # self.window = window
-            self.window = pygame.display.set_mode((df.pg_scale * (self.gmax - self.gmin + 2 * df.bound_tol)))
 
-            # self.dispay_surf=pygame.display.set_mode((1000,1000), flags=pygame.RESIZABLE)#|pygame.OPENGL)
-            self.bound_rect = (df.pg_scale * df.bound_tol, df.pg_scale * df.bound_tol, *(df.pg_scale * (self.gmax - self.gmin)))
-            self.drone_img = pygame.image.load('drone_15.png')
-            self.drone_ghost_img = pygame.image.load('drone_15_ghost.png')
+            os.environ['SDL_VIDEO_WINDOW_POS'] = "%d,%d" % (0+self.id*(df.pg_scale * (self.gmax[0] - self.gmin[0] + 2 * df.bound_tol)), 0)
+            surface = pygame.display.set_mode((df.pg_scale * (self.gmax - self.gmin + 2 * df.bound_tol)))
             pygame.display.set_caption(f"Environment {self.id}")
+            
+            # self.dispay_surf=pygame.display.set_mode((1000,1000), flags=pygame.RESIZABLE)#|pygame.OPENGL)
+            # # self.drone_img = pygame.image.load('drone_15.png')
+            # self.drone_ghost_img = pygame.image.load('drone_15_ghost.png')
+            
 
         # MAIN LOOP
         current_frame = 0
@@ -147,7 +147,7 @@ class Env:
                 current_frame += 1
                 self.update(interval, current_frame)
                 if df.animated:
-                    self.render(self.window)
+                    self.render(surface)
             act_time = time.time() - start  # actual time since start of simulation
             clock.tick(1 / interval)
         # performance loop
@@ -155,15 +155,19 @@ class Env:
             for _ in range(speedup):
                 current_frame += 1
                 self.update(interval, current_frame)
-                self.calcOrderParams(interval, current_frame)
+                # self.calcOrderParams(interval, current_frame)
                 try:
-                    q.put(self.agents)
+                    q.put(self.agents)     
                 except:
                     pass
                 # q.close()
                 # q.join_thread()
                 if df.animated:
-                    self.render(self.window)
+                    self.render(surface)
+            # cw = q.get()
+            # if len(cw) == 2:
+            #     for agent in self.agents:
+            #         agent.scw(cw[0],cw[1])
                 # time.sleep(0.00001)
             act_time = time.time() - start  # actual time since start of simulation
             # print(p.cpu_percent())
@@ -229,27 +233,17 @@ class Env:
     def move_obstacle(self, i, vec):
         self.obstacles[i].set_xy(self.obstacles[i].get_xy() + vec)
 
-    def pause(self):
-        self.ani.event_source.stop()
-
-    def play(self):
-        self.ani.event_source.start()
-
-    def plot_static(self):
-        '''plot static things on the axes'''
-        if df.obs_flag:
-            for obs in self.obstacles:
-                self.ax.add_patch(obs)
-        self.ax.add_patch(self.arena)
-
-    def change_waypoint(self, event):
-        waypoint = np.array([event.xdata, event.ydata])
-        for agent in self.agents:
-            agent.waypoint = waypoint
-        self.wp_artist.set_data(waypoint[0], waypoint[1])
-
     def render(self, surface):
         e=pygame.event.get()
+        if df.wp_flag:
+            pygame.draw.circle(surface,(0, 0, 255),
+                               (self.transform @ self.agents[0].waypoint + df.pg_scale * (self.gmax[0] + df.bound_tol)).astype('int'), 6)
+            for event in e:
+                if event.type == pygame.MOUSEBUTTONUP:
+                    screen_pos = pygame.mouse.get_pos()                
+                    real_pos = -self.transform @ (df.pg_scale *(self.gmax[0] + df.bound_tol)- screen_pos ).astype('int')//(df.pg_scale**2)
+                    for agent in self.agents:
+                        agent.scw(real_pos[0], real_pos[1])
         surface.fill((230, 230, 230))
         pygame.draw.rect(surface, (100, 100, 100), self.bound_rect, 1)
         for agent in self.agents:

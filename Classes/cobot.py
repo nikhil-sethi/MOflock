@@ -8,7 +8,7 @@ import Config.defaults as df
 class CoBot(bot.Bot):
 
     def __init__(self, env):
-        self.memory = []
+        # self.memory = []
         self.phi_coll = 0
         self.phi_corr = 0
         self.phi_vel = 0
@@ -30,7 +30,7 @@ class CoBot(bot.Bot):
 
         if frame % (df.gps_del / step) == 0:
             self.v_d = np.zeros(2)
-            super().calcDesiredVelocity()  # for Bot
+            # super().calcDesiredVelocity()  # for Bot
             if any(self.nbors):
                 rji, rji_mag, vji, vji_mag = self.get_noisedState()
                 v_rep = 0
@@ -42,7 +42,8 @@ class CoBot(bot.Bot):
                 self.v_d += v_rep + v_frict
                 # print(self.id, "v_rep=", v_rep, "mag=", norm(v_rep))
                 # print(self.id, "v_rep=", norm(v_rep), " v_align= ", norm(v_frict))
-            self.v_d = unit_vector(self.v_d)[0] *min(norm(self.v_d), df.vmax)#df.v_flock  #
+            super().calcDesiredVelocity()  # for Bot
+            # self.v_d = unit_vector(self.v_d)[0] *min(norm(self.v_d), df.vmax)#df.v_flock  #
 
     def get_nbors(self):
         # rji = np.array([agent.pos for agent in self.env.agents]) - self.pos
